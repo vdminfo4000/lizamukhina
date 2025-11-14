@@ -1,7 +1,50 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LineChart, TrendingUp, BarChart3, PieChart } from "lucide-react";
+import { LineChart, TrendingUp, BarChart3, PieChart, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+
+// Данные приоритетности сбора урожая
+const harvestPriority = [
+  { 
+    priority: 1, 
+    plot: "Участок 2", 
+    culture: "Ячмень", 
+    maturity: 92, 
+    quality: 95, 
+    daysToHarvest: 5,
+    weather: "Благоприятная",
+    soilMoisture: 58,
+    recommendation: "Срочно начать сбор",
+    status: "urgent"
+  },
+  { 
+    priority: 2, 
+    plot: "Участок 1", 
+    culture: "Пшеница озимая", 
+    maturity: 85, 
+    quality: 88, 
+    daysToHarvest: 12,
+    weather: "Дождь через 3 дня",
+    soilMoisture: 65,
+    recommendation: "Подготовить технику",
+    status: "high"
+  },
+  { 
+    priority: 3, 
+    plot: "Участок 3", 
+    culture: "Кукуруза", 
+    maturity: 65, 
+    quality: 82, 
+    daysToHarvest: 35,
+    weather: "Стабильная",
+    soilMoisture: 62,
+    recommendation: "Наблюдение",
+    status: "normal"
+  },
+];
 
 export default function Analytics() {
   return (
@@ -70,13 +113,166 @@ export default function Analytics() {
       </div>
 
       {/* Main Analytics */}
-      <Tabs defaultValue="forecast" className="space-y-4">
+      <Tabs defaultValue="priority" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="priority">Приоритет сбора</TabsTrigger>
           <TabsTrigger value="forecast">Прогнозирование</TabsTrigger>
           <TabsTrigger value="comparison">Сопоставление</TabsTrigger>
           <TabsTrigger value="efficiency">Эффективность</TabsTrigger>
           <TabsTrigger value="reports">Отчеты</TabsTrigger>
         </TabsList>
+
+        {/* Harvest Priority Tab */}
+        <TabsContent value="priority" className="space-y-4">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle>Приоритетность сбора урожая</CardTitle>
+              <CardDescription>
+                Аналитика на основе данных о созревании, погодных условиях и состоянии почвы
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-20">Приоритет</TableHead>
+                    <TableHead>Участок</TableHead>
+                    <TableHead>Культура</TableHead>
+                    <TableHead>Зрелость</TableHead>
+                    <TableHead>Качество</TableHead>
+                    <TableHead>До сбора</TableHead>
+                    <TableHead>Погода</TableHead>
+                    <TableHead>Влажность почвы</TableHead>
+                    <TableHead>Рекомендация</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {harvestPriority.map((item) => (
+                    <TableRow key={item.priority}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {item.status === "urgent" && <AlertCircle className="h-5 w-5 text-red-600" />}
+                          {item.status === "high" && <Clock className="h-5 w-5 text-amber-600" />}
+                          {item.status === "normal" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                          <span className="font-bold">{item.priority}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{item.plot}</TableCell>
+                      <TableCell>{item.culture}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Progress value={item.maturity} className="h-2 w-20" />
+                            <span className="text-sm font-medium">{item.maturity}%</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.quality >= 90 ? "default" : "secondary"}>
+                          {item.quality}/100
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className={item.daysToHarvest <= 7 ? "font-bold text-red-600" : ""}>
+                          {item.daysToHarvest} дней
+                        </span>
+                      </TableCell>
+                      <TableCell>{item.weather}</TableCell>
+                      <TableCell>{item.soilMoisture}%</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={
+                            item.status === "urgent" ? "destructive" : 
+                            item.status === "high" ? "default" : 
+                            "secondary"
+                          }
+                        >
+                          {item.recommendation}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Weather and Soil Analytics */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Прогноз погоды и рекомендации</CardTitle>
+                <CardDescription>Влияние погодных условий на сроки сбора</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">Ближайшие 3 дня</h4>
+                    <Badge>Благоприятно</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Устойчивая сухая погода. Оптимальные условия для сбора ячменя и пшеницы.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">Через 3-5 дней</h4>
+                    <Badge variant="default">Внимание</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Ожидаются дожди. Рекомендуется завершить сбор на Участке 2 до начала осадков.
+                  </p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">6-7 дней</h4>
+                    <Badge variant="secondary">Стабильно</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Возвращение сухой погоды. Возможен сбор на Участке 1 после улучшения условий.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Анализ состояния почвы</CardTitle>
+                <CardDescription>Влияние параметров почвы на качество урожая</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Участок 1 - Влажность</span>
+                    <span className="text-sm text-muted-foreground">65% (оптимально)</span>
+                  </div>
+                  <Progress value={65} className="h-2" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Участок 2 - Влажность</span>
+                    <span className="text-sm text-red-600">42% (низкая)</span>
+                  </div>
+                  <Progress value={42} className="h-2" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Участок 3 - Влажность</span>
+                    <span className="text-sm text-muted-foreground">62% (оптимально)</span>
+                  </div>
+                  <Progress value={62} className="h-2" />
+                </div>
+                <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 mt-4">
+                  <h4 className="font-semibold mb-2 text-blue-900">Рекомендация</h4>
+                  <p className="text-sm text-blue-800">
+                    Низкая влажность на Участке 2 способствует быстрому созреванию. 
+                    Рекомендуется ускорить сбор для сохранения качества зерна.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         <TabsContent value="forecast" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">

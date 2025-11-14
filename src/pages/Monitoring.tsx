@@ -1,13 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Droplets, Thermometer, Wind, Sun, Activity, AlertTriangle, Settings, Plus, Wifi, WifiOff, Power, RefreshCw } from "lucide-react";
+import { Droplets, Thermometer, Wind, Sun, Activity, AlertTriangle, Settings, Plus, Wifi, WifiOff, Power, RefreshCw, TrendingUp, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState } from "react";
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const sensorData = [
   {
@@ -49,24 +52,50 @@ const weatherData = {
   ],
 };
 
+// Данные для графиков
+const chartData = [
+  { time: '00:00', moisture: 65, temp: 18, ph: 6.5 },
+  { time: '04:00', moisture: 63, temp: 17, ph: 6.5 },
+  { time: '08:00', moisture: 61, temp: 19, ph: 6.4 },
+  { time: '12:00', moisture: 58, temp: 22, ph: 6.6 },
+  { time: '16:00', moisture: 55, temp: 24, ph: 6.5 },
+  { time: '20:00', moisture: 60, temp: 20, ph: 6.5 },
+];
+
+// Данные о созревании
+const maturityData = [
+  { plot: "Участок 1", culture: "Пшеница озимая", maturity: 85, stage: "Молочная спелость", daysToHarvest: 12 },
+  { plot: "Участок 2", culture: "Ячмень", maturity: 92, stage: "Восковая спелость", daysToHarvest: 5 },
+  { plot: "Участок 3", culture: "Кукуруза", maturity: 65, stage: "Цветение", daysToHarvest: 35 },
+];
+
+// Журнал событий
+const eventLog = [
+  { id: 1, time: "14:23", date: "14.11.2025", type: "warning", sensor: "SN007", plot: "Участок 2", message: "Низкий заряд батареи (15%)" },
+  { id: 2, time: "12:15", date: "14.11.2025", type: "info", sensor: "SN001", plot: "Участок 1", message: "Калибровка выполнена успешно" },
+  { id: 3, time: "09:40", date: "14.11.2025", type: "alert", sensor: "SN005", plot: "Участок 2", message: "Влажность ниже порога (42%)" },
+  { id: 4, time: "08:20", date: "14.11.2025", type: "info", sensor: "SN003", plot: "Участок 1", message: "Система запущена" },
+  { id: 5, time: "23:15", date: "13.11.2025", type: "warning", sensor: "SN007", plot: "Участок 2", message: "Потеря связи с датчиком" },
+];
+
 const plotSensors = {
   "Участок 1": [
-    { id: "SN001", name: "Датчик влажности #1", type: "Влажность почвы", status: "online", battery: "85%", interval: "5 мин", threshold: "40-70%" },
-    { id: "SN002", name: "Датчик температуры #1", type: "Температура", status: "online", battery: "92%", interval: "10 мин", threshold: "15-25°C" },
-    { id: "SN003", name: "Датчик pH #1", type: "pH почвы", status: "online", battery: "78%", interval: "30 мин", threshold: "6.0-7.5" },
-    { id: "SN004", name: "Датчик освещенности #1", type: "Освещенность", status: "online", battery: "88%", interval: "15 мин", threshold: "500-1000 Lux" },
+    { id: "SN001", name: "Датчик влажности #1", type: "Влажность почвы", status: "online", battery: "85%", interval: "5 мин", threshold: "40-70%", lastCalibration: "10.11.2025" },
+    { id: "SN002", name: "Датчик температуры #1", type: "Температура", status: "online", battery: "92%", interval: "10 мин", threshold: "15-25°C", lastCalibration: "08.11.2025" },
+    { id: "SN003", name: "Датчик pH #1", type: "pH почвы", status: "online", battery: "78%", interval: "30 мин", threshold: "6.0-7.5", lastCalibration: "14.11.2025" },
+    { id: "SN004", name: "Датчик освещенности #1", type: "Освещенность", status: "online", battery: "88%", interval: "15 мин", threshold: "500-1000 Lux", lastCalibration: "09.11.2025" },
   ],
   "Участок 2": [
-    { id: "SN005", name: "Датчик влажности #2", type: "Влажность почвы", status: "online", battery: "91%", interval: "5 мин", threshold: "40-70%" },
-    { id: "SN006", name: "Датчик температуры #2", type: "Температура", status: "online", battery: "65%", interval: "10 мин", threshold: "15-25°C" },
-    { id: "SN007", name: "Датчик pH #2", type: "pH почвы", status: "offline", battery: "15%", interval: "30 мин", threshold: "6.0-7.5" },
-    { id: "SN008", name: "Датчик освещенности #2", type: "Освещенность", status: "online", battery: "72%", interval: "15 мин", threshold: "500-1000 Lux" },
+    { id: "SN005", name: "Датчик влажности #2", type: "Влажность почвы", status: "online", battery: "91%", interval: "5 мин", threshold: "40-70%", lastCalibration: "12.11.2025" },
+    { id: "SN006", name: "Датчик температуры #2", type: "Температура", status: "online", battery: "65%", interval: "10 мин", threshold: "15-25°C", lastCalibration: "11.11.2025" },
+    { id: "SN007", name: "Датчик pH #2", type: "pH почвы", status: "offline", battery: "15%", interval: "30 мин", threshold: "6.0-7.5", lastCalibration: "05.11.2025" },
+    { id: "SN008", name: "Датчик освещенности #2", type: "Освещенность", status: "online", battery: "72%", interval: "15 мин", threshold: "500-1000 Lux", lastCalibration: "10.11.2025" },
   ],
   "Участок 3": [
-    { id: "SN009", name: "Датчик влажности #3", type: "Влажность почвы", status: "online", battery: "83%", interval: "5 мин", threshold: "40-70%" },
-    { id: "SN010", name: "Датчик температуры #3", type: "Температура", status: "online", battery: "95%", interval: "10 мин", threshold: "15-25°C" },
-    { id: "SN011", name: "Датчик pH #3", type: "pH почвы", status: "online", battery: "67%", interval: "30 мин", threshold: "6.0-7.5" },
-    { id: "SN012", name: "Датчик освещенности #3", type: "Освещенность", status: "online", battery: "54%", interval: "15 мин", threshold: "500-1000 Lux" },
+    { id: "SN009", name: "Датчик влажности #3", type: "Влажность почвы", status: "online", battery: "95%", interval: "5 мин", threshold: "40-70%", lastCalibration: "13.11.2025" },
+    { id: "SN010", name: "Датчик температуры #3", type: "Температура", status: "online", battery: "82%", interval: "10 мин", threshold: "15-25°C", lastCalibration: "12.11.2025" },
+    { id: "SN011", name: "Датчик pH #3", type: "pH почвы", status: "online", battery: "89%", interval: "30 мин", threshold: "6.0-7.5", lastCalibration: "11.11.2025" },
+    { id: "SN012", name: "Датчик освещенности #3", type: "Освещенность", status: "online", battery: "76%", interval: "15 мин", threshold: "500-1000 Lux", lastCalibration: "13.11.2025" },
   ],
 };
 
@@ -74,6 +103,8 @@ export default function Monitoring() {
   const [systemActive, setSystemActive] = useState(true);
   const [selectedPlot, setSelectedPlot] = useState("Участок 1");
   const [editingSensor, setEditingSensor] = useState<any>(null);
+  const [calibratingSensor, setCalibratingSensor] = useState<any>(null);
+  const [eventFilter, setEventFilter] = useState<string>("all");
   return (
     <div className="space-y-6">
       <div>
