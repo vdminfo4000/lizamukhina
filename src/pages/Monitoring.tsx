@@ -1,7 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Droplets, Thermometer, Wind, Sun, Activity, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Droplets, Thermometer, Wind, Sun, Activity, AlertTriangle, Settings, Plus, Wifi, WifiOff, Power, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 const sensorData = [
   {
@@ -43,7 +49,15 @@ const weatherData = {
   ],
 };
 
+const connectedSensors = [
+  { id: "SN001", name: "Датчик влажности #1", type: "Влажность почвы", plot: "Участок 1", status: "online", battery: "85%" },
+  { id: "SN002", name: "Датчик температуры #1", type: "Температура", plot: "Участок 1", status: "online", battery: "92%" },
+  { id: "SN003", name: "Датчик pH #1", type: "pH почвы", plot: "Участок 2", status: "offline", battery: "15%" },
+  { id: "SN004", name: "Датчик освещенности #1", type: "Освещенность", plot: "Участок 3", status: "online", battery: "67%" },
+];
+
 export default function Monitoring() {
+  const [systemActive, setSystemActive] = useState(true);
   return (
     <div className="space-y-6">
       <div>
@@ -52,6 +66,139 @@ export default function Monitoring() {
           Данные с датчиков и метеостанций в реальном времени
         </p>
       </div>
+
+      {/* Control Panel */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Панель управления</CardTitle>
+              <CardDescription>Управление системой мониторинга</CardDescription>
+            </div>
+            <Badge className={systemActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+              {systemActive ? "Система активна" : "Система остановлена"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Button 
+              onClick={() => setSystemActive(!systemActive)}
+              variant={systemActive ? "destructive" : "default"}
+              className="gap-2"
+            >
+              <Power className="h-4 w-4" />
+              {systemActive ? "Остановить систему" : "Запустить систему"}
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Обновить данные
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Подключить датчик
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Подключение нового датчика</DialogTitle>
+                  <DialogDescription>
+                    Введите параметры датчика для подключения к системе мониторинга
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sensor-id">ID датчика</Label>
+                    <Input id="sensor-id" placeholder="SN005" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sensor-name">Название</Label>
+                    <Input id="sensor-name" placeholder="Датчик влажности #2" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sensor-type">Тип датчика</Label>
+                    <Select>
+                      <SelectTrigger id="sensor-type">
+                        <SelectValue placeholder="Выберите тип" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="moisture">Влажность почвы</SelectItem>
+                        <SelectItem value="temperature">Температура</SelectItem>
+                        <SelectItem value="ph">pH почвы</SelectItem>
+                        <SelectItem value="light">Освещенность</SelectItem>
+                        <SelectItem value="wind">Скорость ветра</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sensor-plot">Участок</Label>
+                    <Select>
+                      <SelectTrigger id="sensor-plot">
+                        <SelectValue placeholder="Выберите участок" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="plot1">Участок 1</SelectItem>
+                        <SelectItem value="plot2">Участок 2</SelectItem>
+                        <SelectItem value="plot3">Участок 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button className="w-full">Подключить датчик</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Настройки
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Connected Sensors */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle>Подключенные датчики</CardTitle>
+          <CardDescription>Список активных датчиков и их статус</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {connectedSensors.map((sensor) => (
+              <div 
+                key={sensor.id} 
+                className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                    sensor.status === 'online' ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
+                    {sensor.status === 'online' ? (
+                      <Wifi className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <WifiOff className="h-5 w-5 text-gray-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{sensor.name}</p>
+                    <p className="text-sm text-muted-foreground">{sensor.id} • {sensor.type} • {sensor.plot}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Заряд батареи</p>
+                    <p className="text-sm font-medium">{sensor.battery}</p>
+                  </div>
+                  <Badge className={sensor.status === 'online' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                    {sensor.status === 'online' ? 'Онлайн' : 'Офлайн'}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Weather Widget */}
       <Card className="shadow-card bg-gradient-primary">
