@@ -49,15 +49,31 @@ const weatherData = {
   ],
 };
 
-const connectedSensors = [
-  { id: "SN001", name: "Датчик влажности #1", type: "Влажность почвы", plot: "Участок 1", status: "online", battery: "85%" },
-  { id: "SN002", name: "Датчик температуры #1", type: "Температура", plot: "Участок 1", status: "online", battery: "92%" },
-  { id: "SN003", name: "Датчик pH #1", type: "pH почвы", plot: "Участок 2", status: "offline", battery: "15%" },
-  { id: "SN004", name: "Датчик освещенности #1", type: "Освещенность", plot: "Участок 3", status: "online", battery: "67%" },
-];
+const plotSensors = {
+  "Участок 1": [
+    { id: "SN001", name: "Датчик влажности #1", type: "Влажность почвы", status: "online", battery: "85%", interval: "5 мин", threshold: "40-70%" },
+    { id: "SN002", name: "Датчик температуры #1", type: "Температура", status: "online", battery: "92%", interval: "10 мин", threshold: "15-25°C" },
+    { id: "SN003", name: "Датчик pH #1", type: "pH почвы", status: "online", battery: "78%", interval: "30 мин", threshold: "6.0-7.5" },
+    { id: "SN004", name: "Датчик освещенности #1", type: "Освещенность", status: "online", battery: "88%", interval: "15 мин", threshold: "500-1000 Lux" },
+  ],
+  "Участок 2": [
+    { id: "SN005", name: "Датчик влажности #2", type: "Влажность почвы", status: "online", battery: "91%", interval: "5 мин", threshold: "40-70%" },
+    { id: "SN006", name: "Датчик температуры #2", type: "Температура", status: "online", battery: "65%", interval: "10 мин", threshold: "15-25°C" },
+    { id: "SN007", name: "Датчик pH #2", type: "pH почвы", status: "offline", battery: "15%", interval: "30 мин", threshold: "6.0-7.5" },
+    { id: "SN008", name: "Датчик освещенности #2", type: "Освещенность", status: "online", battery: "72%", interval: "15 мин", threshold: "500-1000 Lux" },
+  ],
+  "Участок 3": [
+    { id: "SN009", name: "Датчик влажности #3", type: "Влажность почвы", status: "online", battery: "83%", interval: "5 мин", threshold: "40-70%" },
+    { id: "SN010", name: "Датчик температуры #3", type: "Температура", status: "online", battery: "95%", interval: "10 мин", threshold: "15-25°C" },
+    { id: "SN011", name: "Датчик pH #3", type: "pH почвы", status: "online", battery: "67%", interval: "30 мин", threshold: "6.0-7.5" },
+    { id: "SN012", name: "Датчик освещенности #3", type: "Освещенность", status: "online", battery: "54%", interval: "15 мин", threshold: "500-1000 Lux" },
+  ],
+};
 
 export default function Monitoring() {
   const [systemActive, setSystemActive] = useState(true);
+  const [selectedPlot, setSelectedPlot] = useState("Участок 1");
+  const [editingSensor, setEditingSensor] = useState<any>(null);
   return (
     <div className="space-y-6">
       <div>
@@ -157,20 +173,34 @@ export default function Monitoring() {
         </CardContent>
       </Card>
 
-      {/* Connected Sensors */}
+      {/* Sensors by Plot */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>Подключенные датчики</CardTitle>
-          <CardDescription>Список активных датчиков и их статус</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Датчики по участкам</CardTitle>
+              <CardDescription>Управление и настройка датчиков для каждого участка</CardDescription>
+            </div>
+            <Select value={selectedPlot} onValueChange={setSelectedPlot}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Участок 1">Участок 1</SelectItem>
+                <SelectItem value="Участок 2">Участок 2</SelectItem>
+                <SelectItem value="Участок 3">Участок 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {connectedSensors.map((sensor) => (
+            {plotSensors[selectedPlot as keyof typeof plotSensors].map((sensor) => (
               <div 
                 key={sensor.id} 
                 className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                     sensor.status === 'online' ? 'bg-green-100' : 'bg-gray-100'
                   }`}>
@@ -180,19 +210,85 @@ export default function Monitoring() {
                       <WifiOff className="h-5 w-5 text-gray-600" />
                     )}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-foreground">{sensor.name}</p>
-                    <p className="text-sm text-muted-foreground">{sensor.id} • {sensor.type} • {sensor.plot}</p>
+                    <p className="text-sm text-muted-foreground">{sensor.id} • {sensor.type}</p>
+                    <div className="flex gap-4 mt-1">
+                      <span className="text-xs text-muted-foreground">Интервал: {sensor.interval}</span>
+                      <span className="text-xs text-muted-foreground">Порог: {sensor.threshold}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Заряд батареи</p>
+                    <p className="text-sm text-muted-foreground">Батарея</p>
                     <p className="text-sm font-medium">{sensor.battery}</p>
                   </div>
                   <Badge className={sensor.status === 'online' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
                     {sensor.status === 'online' ? 'Онлайн' : 'Офлайн'}
                   </Badge>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setEditingSensor(sensor)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Настройка датчика</DialogTitle>
+                        <DialogDescription>
+                          Настройте параметры датчика {sensor.name}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="sensor-name-edit">Название</Label>
+                          <Input id="sensor-name-edit" defaultValue={sensor.name} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="interval">Интервал опроса</Label>
+                          <Select defaultValue={sensor.interval}>
+                            <SelectTrigger id="interval">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1 мин">1 минута</SelectItem>
+                              <SelectItem value="5 мин">5 минут</SelectItem>
+                              <SelectItem value="10 мин">10 минут</SelectItem>
+                              <SelectItem value="15 мин">15 минут</SelectItem>
+                              <SelectItem value="30 мин">30 минут</SelectItem>
+                              <SelectItem value="1 час">1 час</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="threshold">Пороговые значения</Label>
+                          <Input id="threshold" defaultValue={sensor.threshold} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="alerts">Отправка уведомлений</Label>
+                          <Select defaultValue="enabled">
+                            <SelectTrigger id="alerts">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="enabled">Включены</SelectItem>
+                              <SelectItem value="disabled">Отключены</SelectItem>
+                              <SelectItem value="critical">Только критические</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button className="flex-1">Сохранить</Button>
+                          <Button variant="outline" className="flex-1">Отменить</Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             ))}
