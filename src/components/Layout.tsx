@@ -12,8 +12,10 @@ import {
   User,
   BookOpen,
   HelpCircle,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,6 +32,7 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { signOut } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -131,6 +134,9 @@ export default function Layout({ children }: LayoutProps) {
                   <User className="h-5 w-5" />
                 </Button>
               </Link>
+              <Button variant="ghost" size="icon" title="Выход" onClick={signOut}>
+                <LogOut className="h-5 w-5" />
+              </Button>
             </div>
           </div>
         </header>
