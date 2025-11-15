@@ -1,34 +1,182 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Database, Search, Plus, ExternalLink, RefreshCw } from "lucide-react";
+import { Database, Search, Warehouse, Tractor, MapPin, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { AddPlotDialog } from "@/components/forms/AddPlotDialog";
+import { AddEquipmentDialog } from "@/components/forms/AddEquipmentDialog";
+import { AddFacilityDialog } from "@/components/forms/AddFacilityDialog";
 
-const products = [
-  { id: "P001", name: "Пшеница озимая", category: "Зерновые", quantity: "150 т", status: "active", integration: "1С" },
-  { id: "P002", name: "Ячмень", category: "Зерновые", quantity: "80 т", status: "active", integration: "SAP" },
-  { id: "P003", name: "Кукуруза", category: "Зерновые", quantity: "120 т", status: "pending", integration: "-" },
-  { id: "P004", name: "Подсолнечник", category: "Масличные", quantity: "90 т", status: "active", integration: "1С" },
-];
+interface Plot {
+  id: string;
+  cadastral_number: string;
+  area: number;
+  crop: string | null;
+  address: string | null;
+  status: string;
+}
 
-const integrations = [
-  { name: "1С:Предприятие", status: "connected", lastSync: "10 мин назад" },
-  { name: "SAP ERP", status: "connected", lastSync: "1 час назад" },
-  { name: "ФГИС Меркурий", status: "pending", lastSync: "-" },
-  { name: "ВетИС", status: "disconnected", lastSync: "3 дня назад" },
-];
+interface Equipment {
+  id: string;
+  name: string;
+  type: string;
+  model: string | null;
+  year: number | null;
+  status: string;
+}
+
+interface Facility {
+  id: string;
+  name: string;
+  type: string;
+  capacity: string | null;
+  address: string | null;
+  status: string;
+}
 
 export default function Registry() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [plots, setPlots] = useState<Plot[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    
+    // Get user's company ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.company_id) {
+      setLoading(false);
+      return;
+    }
+
+    setCompanyId(profile.company_id);
+
+    // Load plots
+    const { data: plotsData } = await supabase
+      .from('plots')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false });
+
+    if (plotsData) setPlots(plotsData);
+
+    // Load equipment
+    const { data: equipmentData } = await supabase
+      .from('equipment')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false });
+
+    if (equipmentData) setEquipment(equipmentData);
+
+    // Load facilities
+    const { data: facilitiesData } = await supabase
+      .from('facilities')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false });
+
+    if (facilitiesData) setFacilities(facilitiesData);
+
+    setLoading(false);
+  };
+
+  const deletePlot = async (id: string) => {
+    const { error } = await supabase.from('plots').delete().eq('id', id);
+    
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Успешно', description: 'Участок удален' });
+      loadData();
+    }
+  };
+
+  const deleteEquipment = async (id: string) => {
+    const { error } = await supabase.from('equipment').delete().eq('id', id);
+    
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Успешно', description: 'Техника удалена' });
+      loadData();
+    }
+  };
+
+  const deleteFacility = async (id: string) => {
+    const { error } = await supabase.from('facilities').delete().eq('id', id);
+    
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Успешно', description: 'Объект удален' });
+      loadData();
+    }
+  };
+
+  const filteredPlots = plots.filter(plot =>
+    plot.cadastral_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    plot.crop?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    plot.address?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredEquipment = equipment.filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredFacilities = facilities.filter(facility =>
+    facility.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    facility.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="mb-2 text-3xl font-bold text-foreground">Реестр продукции</h1>
+        <h1 className="mb-2 text-3xl font-bold text-foreground">Реестр активов</h1>
         <p className="text-muted-foreground">
-          Управление номенклатурой и интеграция с внешними системами
+          Управление земельными участками, техникой и объектами
         </p>
       </div>
 
@@ -38,8 +186,21 @@ export default function Registry() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Всего позиций</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">127</p>
+                <p className="text-sm font-medium text-muted-foreground">Участков</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{plots.length}</p>
+              </div>
+              <MapPin className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Общая площадь</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {plots.reduce((sum, plot) => sum + Number(plot.area), 0).toFixed(1)} га
+                </p>
               </div>
               <Database className="h-8 w-8 text-primary" />
             </div>
@@ -49,12 +210,10 @@ export default function Registry() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Активных</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">115</p>
+                <p className="text-sm font-medium text-muted-foreground">Техника</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{equipment.length}</p>
               </div>
-              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                <div className="h-3 w-3 rounded-full bg-green-600" />
-              </div>
+              <Tractor className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -62,133 +221,211 @@ export default function Registry() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Интеграций</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">4</p>
+                <p className="text-sm font-medium text-muted-foreground">Объектов</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{facilities.length}</p>
               </div>
-              <ExternalLink className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Синхронизация</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">98%</p>
-              </div>
-              <RefreshCw className="h-8 w-8 text-primary" />
+              <Warehouse className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Products List */}
-        <div className="lg:col-span-2">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Поиск..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="plots" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="plots">Земельные участки</TabsTrigger>
+          <TabsTrigger value="equipment">Техника</TabsTrigger>
+          <TabsTrigger value="facilities">Объекты</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="plots" className="space-y-4">
           <Card className="shadow-card">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Номенклатура продукции</CardTitle>
-                  <CardDescription>Список всех товаров и материалов</CardDescription>
+                  <CardTitle>Земельные участки</CardTitle>
+                  <CardDescription>Список всех земельных участков компании</CardDescription>
                 </div>
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Добавить
-                </Button>
-              </div>
-              <div className="mt-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Поиск по названию или коду..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
+                {companyId && <AddPlotDialog companyId={companyId} onSuccess={loadData} />}
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Код</TableHead>
-                    <TableHead>Наименование</TableHead>
-                    <TableHead>Категория</TableHead>
-                    <TableHead>Количество</TableHead>
-                    <TableHead>Интеграция</TableHead>
-                    <TableHead>Статус</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">{product.id}</TableCell>
-                      <TableCell>{product.name}</TableCell>
-                      <TableCell>{product.category}</TableCell>
-                      <TableCell>{product.quantity}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{product.integration}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {product.status === "active" ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Активен</Badge>
-                        ) : (
-                          <Badge variant="secondary">Ожидает</Badge>
-                        )}
-                      </TableCell>
+              {filteredPlots.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Нет данных. Добавьте первый участок.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Кадастровый номер</TableHead>
+                      <TableHead>Площадь</TableHead>
+                      <TableHead>Культура</TableHead>
+                      <TableHead>Адрес</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPlots.map((plot) => (
+                      <TableRow key={plot.id}>
+                        <TableCell className="font-medium">{plot.cadastral_number}</TableCell>
+                        <TableCell>{plot.area} га</TableCell>
+                        <TableCell>{plot.crop || '-'}</TableCell>
+                        <TableCell>{plot.address || '-'}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                            {plot.status === 'active' ? 'Активен' : plot.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deletePlot(plot.id)}
+                            title="Удалить"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        {/* Integrations */}
-        <div>
+        <TabsContent value="equipment" className="space-y-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle>Внешние интеграции</CardTitle>
-              <CardDescription>Подключенные системы</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {integrations.map((integration) => (
-                <div
-                  key={integration.name}
-                  className="flex items-start justify-between rounded-lg border border-border p-3"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {integration.status === "connected" && (
-                        <div className="h-2 w-2 rounded-full bg-green-600" />
-                      )}
-                      {integration.status === "pending" && (
-                        <div className="h-2 w-2 rounded-full bg-amber-600" />
-                      )}
-                      {integration.status === "disconnected" && (
-                        <div className="h-2 w-2 rounded-full bg-red-600" />
-                      )}
-                      <p className="text-sm font-medium text-foreground">{integration.name}</p>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {integration.lastSync}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Сельхозтехника</CardTitle>
+                  <CardDescription>Список техники компании</CardDescription>
                 </div>
-              ))}
-              <Button variant="outline" className="w-full gap-2">
-                <Plus className="h-4 w-4" />
-                Добавить интеграцию
-              </Button>
+                {companyId && <AddEquipmentDialog companyId={companyId} onSuccess={loadData} />}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {filteredEquipment.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Нет данных. Добавьте первую технику.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Тип</TableHead>
+                      <TableHead>Модель</TableHead>
+                      <TableHead>Год</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEquipment.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>{item.type}</TableCell>
+                        <TableCell>{item.model || '-'}</TableCell>
+                        <TableCell>{item.year || '-'}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                            {item.status === 'active' ? 'Активен' : item.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteEquipment(item.id)}
+                            title="Удалить"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="facilities" className="space-y-4">
+          <Card className="shadow-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Объекты и сооружения</CardTitle>
+                  <CardDescription>Склады, ангары и другие объекты</CardDescription>
+                </div>
+                {companyId && <AddFacilityDialog companyId={companyId} onSuccess={loadData} />}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {filteredFacilities.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Нет данных. Добавьте первый объект.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Тип</TableHead>
+                      <TableHead>Вместимость</TableHead>
+                      <TableHead>Адрес</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFacilities.map((facility) => (
+                      <TableRow key={facility.id}>
+                        <TableCell className="font-medium">{facility.name}</TableCell>
+                        <TableCell>{facility.type}</TableCell>
+                        <TableCell>{facility.capacity || '-'}</TableCell>
+                        <TableCell>{facility.address || '-'}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                            {facility.status === 'active' ? 'Активен' : facility.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteFacility(facility.id)}
+                            title="Удалить"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
