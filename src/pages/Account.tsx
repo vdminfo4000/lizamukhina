@@ -1,65 +1,179 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Tractor, Warehouse } from "lucide-react";
+import { Building2, MapPin, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { AddPlotDialog } from "@/components/forms/AddPlotDialog";
 
-const company = {
-  name: "ООО «СМП СХ»",
-  inn: "7701234567",
-  ogrn: "1027700012345",
-  kpp: "770101001",
-  director: "Иванов Иван Иванович",
-  taxSystem: "ЕСХН",
-  address: "Запорожская область, улица 50-летия победы 12, оф. 7",
-};
+interface Company {
+  id: string;
+  name: string;
+  inn: string | null;
+  ogrn: string | null;
+  director: string | null;
+  email: string | null;
+  phone: string | null;
+  legal_address: string | null;
+  address: string | null;
+}
 
-const plots = [
-  {
-    id: 1,
-    name: "Участок 1",
-    cadastral: "77:01:0001070:1033",
-    area: "10 Га",
-    type: "Собственность",
-    crop: "Пшеница озимая",
-  },
-  {
-    id: 2,
-    name: "Участок 2",
-    cadastral: "77:01:0044470:1033",
-    area: "13 Га",
-    type: "Аренда",
-    crop: "Ячмень",
-  },
-  {
-    id: 3,
-    name: "Участок 3",
-    cadastral: "77:01:0055570:1033",
-    area: "7 Га",
-    type: "Пользование",
-    crop: "Подсолнечник",
-  },
-];
-
-const equipment = [
-  { name: "Комбайн", model: "John Deere S780", sts: "77АВ123456" },
-  { name: "Трактор", model: "New Holland T7.290", sts: "77АВ234567" },
-  { name: "Плуг", model: "Lemken EurOpal 7X", sts: "-" },
-];
-
-const facilities = [
-  { type: "Склад", address: "с. Петровка, ул. Полевая 5", area: "1000 м²" },
-  { type: "Элеватор", address: "с. Петровка, ул. Заводская 12", capacity: "5000 т" },
-];
+interface Plot {
+  id: string;
+  cadastral_number: string;
+  area: number;
+  crop: string | null;
+  address: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  status: string;
+}
 
 export default function Account() {
+  const [company, setCompany] = useState<Company | null>(null);
+  const [plots, setPlots] = useState<Plot[]>([]);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  // Editable company fields
+  const [editedCompany, setEditedCompany] = useState<Company | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Get company_id from profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.company_id) {
+      setLoading(false);
+      return;
+    }
+
+    setCompanyId(profile.company_id);
+
+    // Load company data
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', profile.company_id)
+      .single();
+
+    if (companyData) {
+      setCompany(companyData);
+      setEditedCompany(companyData);
+    }
+
+    // Load plots
+    const { data: plotsData } = await supabase
+      .from('plots')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false });
+
+    if (plotsData) setPlots(plotsData);
+
+    setLoading(false);
+  };
+
+  const handleSaveCompany = async () => {
+    if (!editedCompany || !companyId) return;
+
+    setSaving(true);
+
+    const { error } = await supabase
+      .from('companies')
+      .update({
+        name: editedCompany.name,
+        inn: editedCompany.inn,
+        ogrn: editedCompany.ogrn,
+        director: editedCompany.director,
+        email: editedCompany.email,
+        phone: editedCompany.phone,
+        legal_address: editedCompany.legal_address,
+        address: editedCompany.address,
+      })
+      .eq('id', companyId);
+
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      setCompany(editedCompany);
+      toast({
+        title: 'Успешно',
+        description: 'Данные компании обновлены',
+      });
+    }
+
+    setSaving(false);
+  };
+
+  const deletePlot = async (id: string) => {
+    const { error } = await supabase.from('plots').delete().eq('id', id);
+
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Успешно', description: 'Участок удален' });
+      loadData();
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Загрузка данных...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!company || !editedCompany) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-muted-foreground">Данные компании не найдены</p>
+      </div>
+    );
+  }
+
+  const totalArea = plots.reduce((sum, plot) => sum + Number(plot.area), 0);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="mb-2 text-3xl font-bold text-foreground">Аккаунт компании</h1>
         <p className="text-muted-foreground">
-          Управление профилем организации и объектами производства
+          Управление профилем организации и земельными участками
         </p>
       </div>
 
@@ -72,12 +186,12 @@ export default function Account() {
                 <Building2 className="h-8 w-8" />
                 <div>
                   <h2 className="text-2xl font-bold">{company.name}</h2>
-                  <p className="text-sm opacity-90">{company.taxSystem}</p>
+                  <p className="text-sm opacity-90">ИНН: {company.inn || 'Не указан'}</p>
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-2 text-sm opacity-90">
                 <MapPin className="h-4 w-4" />
-                <span>{company.address}</span>
+                <span>{company.address || 'Адрес не указан'}</span>
               </div>
             </div>
             <Badge className="bg-white/20 text-white hover:bg-white/30">
@@ -91,9 +205,7 @@ export default function Account() {
       <Tabs defaultValue="company" className="space-y-4">
         <TabsList>
           <TabsTrigger value="company">Реквизиты</TabsTrigger>
-          <TabsTrigger value="plots">Участки</TabsTrigger>
-          <TabsTrigger value="assets">Имущество</TabsTrigger>
-          <TabsTrigger value="banking">Банковские данные</TabsTrigger>
+          <TabsTrigger value="plots">Участки ({plots.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="company" className="space-y-4">
@@ -105,43 +217,75 @@ export default function Account() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Наименование компании
-                  </label>
-                  <Input value={company.name} className="mt-1.5" />
+                  <Label htmlFor="name">Наименование организации</Label>
+                  <Input
+                    id="name"
+                    value={editedCompany.name}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, name: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">ИНН</label>
-                  <Input value={company.inn} className="mt-1.5" />
+                  <Label htmlFor="inn">ИНН</Label>
+                  <Input
+                    id="inn"
+                    value={editedCompany.inn || ''}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, inn: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">ОГРН</label>
-                  <Input value={company.ogrn} className="mt-1.5" />
+                  <Label htmlFor="ogrn">ОГРН</Label>
+                  <Input
+                    id="ogrn"
+                    value={editedCompany.ogrn || ''}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, ogrn: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">КПП</label>
-                  <Input value={company.kpp} className="mt-1.5" />
+                  <Label htmlFor="director">Директор</Label>
+                  <Input
+                    id="director"
+                    value={editedCompany.director || ''}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, director: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Генеральный директор
-                  </label>
-                  <Input value={company.director} className="mt-1.5" />
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={editedCompany.email || ''}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, email: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Система налогообложения
-                  </label>
-                  <Input value={company.taxSystem} className="mt-1.5" />
+                  <Label htmlFor="phone">Телефон</Label>
+                  <Input
+                    id="phone"
+                    value={editedCompany.phone || ''}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, phone: e.target.value })}
+                  />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-muted-foreground">Адрес</label>
-                  <Input value={company.address} className="mt-1.5" />
+                  <Label htmlFor="legal_address">Юридический адрес</Label>
+                  <Input
+                    id="legal_address"
+                    value={editedCompany.legal_address || ''}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, legal_address: e.target.value })}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="address">Фактический адрес</Label>
+                  <Input
+                    id="address"
+                    value={editedCompany.address || ''}
+                    onChange={(e) => setEditedCompany({ ...editedCompany, address: e.target.value })}
+                  />
                 </div>
               </div>
-              <div className="mt-6 flex gap-3">
-                <Button>Сохранить изменения</Button>
-                <Button variant="outline">Отменить</Button>
+              <div className="mt-6">
+                <Button onClick={handleSaveCompany} disabled={saving}>
+                  {saving ? 'Сохранение...' : 'Сохранить изменения'}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -153,135 +297,62 @@ export default function Account() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Земельные участки</CardTitle>
-                  <CardDescription>Производственные площади</CardDescription>
+                  <CardDescription>
+                    Всего участков: {plots.length} • Общая площадь: {totalArea.toFixed(2)} Га
+                  </CardDescription>
                 </div>
-                <Button size="sm">Добавить участок</Button>
+                {companyId && (
+                  <AddPlotDialog companyId={companyId} onSuccess={loadData} />
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {plots.map((plot) => (
-                  <div
-                    key={plot.id}
-                    className="flex items-start justify-between rounded-lg border border-border p-4"
-                  >
-                    <div className="flex-1">
-                      <div className="mb-2 flex items-center gap-3">
-                        <h4 className="text-lg font-semibold text-foreground">{plot.name}</h4>
-                        <Badge variant="outline">{plot.type}</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                        <p className="text-muted-foreground">
-                          Кадастровый номер:{" "}
-                          <span className="text-foreground font-medium">{plot.cadastral}</span>
-                        </p>
-                        <p className="text-muted-foreground">
-                          Площадь: <span className="text-foreground font-medium">{plot.area}</span>
-                        </p>
-                        <p className="text-muted-foreground">
-                          Культура: <span className="text-foreground font-medium">{plot.crop}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Редактировать
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="assets" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="shadow-card">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Tractor className="h-5 w-5 text-primary" />
-                  <CardTitle>Техника</CardTitle>
+              {plots.length === 0 ? (
+                <div className="text-center py-8">
+                  <MapPin className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Нет данных о земельных участках</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Добавьте первый участок, чтобы начать управление
+                  </p>
                 </div>
-                <CardDescription>Сельскохозяйственная техника</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {equipment.map((item, idx) => (
-                    <div key={idx} className="rounded-lg border border-border p-3">
-                      <p className="font-medium text-foreground">{item.name}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{item.model}</p>
-                      <p className="text-xs text-muted-foreground mt-1">СТС: {item.sts}</p>
-                    </div>
-                  ))}
-                  <Button variant="outline" className="w-full">
-                    Добавить технику
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Warehouse className="h-5 w-5 text-primary" />
-                  <CardTitle>Недвижимость</CardTitle>
-                </div>
-                <CardDescription>Складские и производственные помещения</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {facilities.map((item, idx) => (
-                    <div key={idx} className="rounded-lg border border-border p-3">
-                      <p className="font-medium text-foreground">{item.type}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{item.address}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {item.area || item.capacity}
-                      </p>
-                    </div>
-                  ))}
-                  <Button variant="outline" className="w-full">
-                    Добавить объект
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="banking" className="space-y-4">
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle>Банковские реквизиты</CardTitle>
-              <CardDescription>Данные для финансовых операций</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Расчетный счет
-                  </label>
-                  <Input placeholder="40702810..." className="mt-1.5" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">БИК</label>
-                  <Input placeholder="044525..." className="mt-1.5" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-muted-foreground">Банк</label>
-                  <Input placeholder="Название банка" className="mt-1.5" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Корреспондентский счет
-                  </label>
-                  <Input placeholder="30101810..." className="mt-1.5" />
-                </div>
-              </div>
-              <div className="mt-6 flex gap-3">
-                <Button>Сохранить данные</Button>
-                <Button variant="outline">Отменить</Button>
-              </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Кадастровый номер</TableHead>
+                      <TableHead>Площадь (Га)</TableHead>
+                      <TableHead>Культура</TableHead>
+                      <TableHead>Адрес</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {plots.map((plot) => (
+                      <TableRow key={plot.id}>
+                        <TableCell className="font-medium">{plot.cadastral_number}</TableCell>
+                        <TableCell>{plot.area}</TableCell>
+                        <TableCell>{plot.crop || '-'}</TableCell>
+                        <TableCell>{plot.address || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={plot.status === 'active' ? 'default' : 'secondary'}>
+                            {plot.status === 'active' ? 'Активен' : 'Неактивен'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deletePlot(plot.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

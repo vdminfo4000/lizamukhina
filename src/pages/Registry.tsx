@@ -3,23 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Database, Search, Warehouse, Tractor, MapPin, Trash2 } from "lucide-react";
+import { Database, Search, Warehouse, Tractor, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AddPlotDialog } from "@/components/forms/AddPlotDialog";
 import { AddEquipmentDialog } from "@/components/forms/AddEquipmentDialog";
 import { AddFacilityDialog } from "@/components/forms/AddFacilityDialog";
-
-interface Plot {
-  id: string;
-  cadastral_number: string;
-  area: number;
-  crop: string | null;
-  address: string | null;
-  status: string;
-}
 
 interface Equipment {
   id: string;
@@ -41,7 +31,6 @@ interface Facility {
 
 export default function Registry() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [plots, setPlots] = useState<Plot[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -72,15 +61,6 @@ export default function Registry() {
 
     setCompanyId(profile.company_id);
 
-    // Load plots
-    const { data: plotsData } = await supabase
-      .from('plots')
-      .select('*')
-      .eq('company_id', profile.company_id)
-      .order('created_at', { ascending: false });
-
-    if (plotsData) setPlots(plotsData);
-
     // Load equipment
     const { data: equipmentData } = await supabase
       .from('equipment')
@@ -100,21 +80,6 @@ export default function Registry() {
     if (facilitiesData) setFacilities(facilitiesData);
 
     setLoading(false);
-  };
-
-  const deletePlot = async (id: string) => {
-    const { error } = await supabase.from('plots').delete().eq('id', id);
-    
-    if (error) {
-      toast({
-        title: 'Ошибка',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({ title: 'Успешно', description: 'Участок удален' });
-      loadData();
-    }
   };
 
   const deleteEquipment = async (id: string) => {
@@ -147,12 +112,6 @@ export default function Registry() {
     }
   };
 
-  const filteredPlots = plots.filter(plot =>
-    plot.cadastral_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    plot.crop?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    plot.address?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const filteredEquipment = equipment.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.type.toLowerCase().includes(searchQuery.toLowerCase())
@@ -176,36 +135,12 @@ export default function Registry() {
       <div>
         <h1 className="mb-2 text-3xl font-bold text-foreground">Реестр активов</h1>
         <p className="text-muted-foreground">
-          Управление земельными участками, техникой и объектами
+          Управление техникой и объектами
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Участков</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">{plots.length}</p>
-              </div>
-              <MapPin className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Общая площадь</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">
-                  {plots.reduce((sum, plot) => sum + Number(plot.area), 0).toFixed(1)} га
-                </p>
-              </div>
-              <Database className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="shadow-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -242,71 +177,11 @@ export default function Registry() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="plots" className="space-y-4">
+      <Tabs defaultValue="equipment" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="plots">Земельные участки</TabsTrigger>
           <TabsTrigger value="equipment">Техника</TabsTrigger>
           <TabsTrigger value="facilities">Объекты</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="plots" className="space-y-4">
-          <Card className="shadow-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Земельные участки</CardTitle>
-                  <CardDescription>Список всех земельных участков компании</CardDescription>
-                </div>
-                {companyId && <AddPlotDialog companyId={companyId} onSuccess={loadData} />}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {filteredPlots.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Нет данных. Добавьте первый участок.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Кадастровый номер</TableHead>
-                      <TableHead>Площадь</TableHead>
-                      <TableHead>Культура</TableHead>
-                      <TableHead>Адрес</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPlots.map((plot) => (
-                      <TableRow key={plot.id}>
-                        <TableCell className="font-medium">{plot.cadastral_number}</TableCell>
-                        <TableCell>{plot.area} га</TableCell>
-                        <TableCell>{plot.crop || '-'}</TableCell>
-                        <TableCell>{plot.address || '-'}</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            {plot.status === 'active' ? 'Активен' : plot.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deletePlot(plot.id)}
-                            title="Удалить"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="equipment" className="space-y-4">
           <Card className="shadow-card">
