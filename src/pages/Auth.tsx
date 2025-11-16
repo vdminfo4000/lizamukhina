@@ -20,8 +20,6 @@ const Auth = () => {
   // Sign Up form state
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [companyName, setCompanyName] = useState('');
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -53,8 +51,6 @@ const Auth = () => {
     setLoading(true);
 
     const { error } = await signUp(signUpEmail, signUpPassword, {
-      first_name: firstName,
-      last_name: lastName,
       company_name: companyName,
     });
 
@@ -126,28 +122,6 @@ const Auth = () => {
 
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstname">Имя</Label>
-                    <Input
-                      id="firstname"
-                      placeholder="Василий"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastname">Фамилия</Label>
-                    <Input
-                      id="lastname"
-                      placeholder="Иванов"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="company">Название компании</Label>
                   <Input
