@@ -87,6 +87,15 @@ export default function Monitoring() {
     serial_number: "",
     battery_level: "100"
   });
+  const [spectrometerData, setSpectrometerData] = useState({
+    pb: "",
+    zn: "",
+    cd: "",
+    as: "",
+    cr: "",
+    ni: "",
+    cu: ""
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
   const { canView, canEdit, loading: accessLoading } = useModuleAccess('monitoring');
@@ -442,6 +451,90 @@ export default function Monitoring() {
                           </DialogHeader>
                           
                           <div className="space-y-6 py-4">
+                            {/* Данные спектрометра металлов */}
+                            <div>
+                              <h3 className="font-semibold mb-3">Данные спектрометра металлов</h3>
+                              <div className="grid grid-cols-4 gap-3">
+                                <div>
+                                  <Label htmlFor="pb">Pb (мг/кг)</Label>
+                                  <Input
+                                    id="pb"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={spectrometerData.pb}
+                                    onChange={(e) => setSpectrometerData({ ...spectrometerData, pb: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="zn">Zn (мг/кг)</Label>
+                                  <Input
+                                    id="zn"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={spectrometerData.zn}
+                                    onChange={(e) => setSpectrometerData({ ...spectrometerData, zn: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="cd">Cd (мг/кг)</Label>
+                                  <Input
+                                    id="cd"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={spectrometerData.cd}
+                                    onChange={(e) => setSpectrometerData({ ...spectrometerData, cd: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="as">As (мг/кг)</Label>
+                                  <Input
+                                    id="as"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={spectrometerData.as}
+                                    onChange={(e) => setSpectrometerData({ ...spectrometerData, as: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="cr">Cr (мг/кг)</Label>
+                                  <Input
+                                    id="cr"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={spectrometerData.cr}
+                                    onChange={(e) => setSpectrometerData({ ...spectrometerData, cr: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="ni">Ni (мг/кг)</Label>
+                                  <Input
+                                    id="ni"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={spectrometerData.ni}
+                                    onChange={(e) => setSpectrometerData({ ...spectrometerData, ni: e.target.value })}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="cu">Cu (мг/кг)</Label>
+                                  <Input
+                                    id="cu"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={spectrometerData.cu}
+                                    onChange={(e) => setSpectrometerData({ ...spectrometerData, cu: e.target.value })}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
                             {/* Добавление зоны */}
                             <div>
                               <h3 className="font-semibold mb-3">Добавить зону мониторинга</h3>
@@ -554,10 +647,16 @@ export default function Monitoring() {
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="moisture">Влажность почвы</SelectItem>
-                                        <SelectItem value="temperature">Температура</SelectItem>
+                                        <SelectItem value="temperature">Температура почвы</SelectItem>
                                         <SelectItem value="ph">pH почвы</SelectItem>
                                         <SelectItem value="light">Освещенность</SelectItem>
                                         <SelectItem value="wind">Ветер</SelectItem>
+                                        <SelectItem value="air_humidity">Влажность воздуха</SelectItem>
+                                        <SelectItem value="air_temperature">Температура воздуха</SelectItem>
+                                        <SelectItem value="ec">EC</SelectItem>
+                                        <SelectItem value="npk">NPK</SelectItem>
+                                        <SelectItem value="nitrates">Нитраты</SelectItem>
+                                        <SelectItem value="other">Другое</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
