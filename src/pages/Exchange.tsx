@@ -14,6 +14,8 @@ import { useAuditLog } from "@/hooks/useAuditLog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { EditListingDialog } from "@/components/forms/EditListingDialog";
 
 const marketPrices = [
   { crop: "Пшеница", price: "18,500₽", change: "+2.3%", trend: "up", volume: "2,450 т" },
