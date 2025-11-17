@@ -27,6 +27,7 @@ export default function Account() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -57,6 +58,15 @@ export default function Account() {
     }
 
     setCompanyId(profile.company_id);
+
+    // Check if user is admin
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    setIsAdmin(roleData?.role === 'admin');
 
     const { data: companyData } = await supabase
       .from('companies')
@@ -179,6 +189,7 @@ export default function Account() {
                     id="name"
                     value={editedCompany.name}
                     onChange={(e) => setEditedCompany({ ...editedCompany, name: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div>
@@ -187,6 +198,7 @@ export default function Account() {
                     id="inn"
                     value={editedCompany.inn || ''}
                     onChange={(e) => setEditedCompany({ ...editedCompany, inn: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div>
@@ -195,6 +207,7 @@ export default function Account() {
                     id="ogrn"
                     value={editedCompany.ogrn || ''}
                     onChange={(e) => setEditedCompany({ ...editedCompany, ogrn: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div>
@@ -203,6 +216,7 @@ export default function Account() {
                     id="director"
                     value={editedCompany.director || ''}
                     onChange={(e) => setEditedCompany({ ...editedCompany, director: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div>
@@ -212,6 +226,7 @@ export default function Account() {
                     type="email"
                     value={editedCompany.email || ''}
                     onChange={(e) => setEditedCompany({ ...editedCompany, email: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div>
@@ -220,6 +235,7 @@ export default function Account() {
                     id="phone"
                     value={editedCompany.phone || ''}
                     onChange={(e) => setEditedCompany({ ...editedCompany, phone: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -228,6 +244,7 @@ export default function Account() {
                     id="legal_address"
                     value={editedCompany.legal_address || ''}
                     onChange={(e) => setEditedCompany({ ...editedCompany, legal_address: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -236,15 +253,18 @@ export default function Account() {
                     id="address"
                     value={editedCompany.address || ''}
                     onChange={(e) => setEditedCompany({ ...editedCompany, address: e.target.value })}
+                    disabled={!isAdmin}
                   />
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end">
-                <Button onClick={handleSaveCompany} disabled={saving}>
-                  {saving ? 'Сохранение...' : 'Сохранить изменения'}
-                </Button>
-              </div>
+              {isAdmin && (
+                <div className="mt-6 flex justify-end">
+                  <Button onClick={handleSaveCompany} disabled={saving}>
+                    {saving ? 'Сохранение...' : 'Сохранить изменения'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
