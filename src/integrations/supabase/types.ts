@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_comments: {
+        Row: {
+          asset_id: string
+          asset_type: string
+          company_id: string
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          asset_id: string
+          asset_type: string
+          company_id: string
+          created_at?: string
+          id?: string
+          message: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          asset_id?: string
+          asset_type?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -89,6 +122,168 @@ export type Database = {
           ogrn?: string | null
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_contacts: {
+        Row: {
+          address: string | null
+          company_id: string
+          contact_type: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_id: string
+          contact_type: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_id?: string
+          contact_type?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          tags: string[] | null
+          uploaded_by: string
+          uploader_name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          tags?: string[] | null
+          uploaded_by: string
+          uploader_name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          tags?: string[] | null
+          uploaded_by?: string
+          uploader_name?: string
+        }
+        Relationships: []
+      }
+      crm_emails: {
+        Row: {
+          attachments: Json | null
+          body: string
+          company_id: string
+          created_at: string
+          direction: string
+          from_email: string
+          id: string
+          is_read: boolean | null
+          subject: string
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          body: string
+          company_id: string
+          created_at?: string
+          direction: string
+          from_email: string
+          id?: string
+          is_read?: boolean | null
+          subject: string
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          body?: string
+          company_id?: string
+          created_at?: string
+          direction?: string
+          from_email?: string
+          id?: string
+          is_read?: boolean | null
+          subject?: string
+          to_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crm_messages: {
+        Row: {
+          channel_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          receiver_id: string | null
+          sender_id: string
+          sender_name: string
+        }
+        Insert: {
+          channel_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          receiver_id?: string | null
+          sender_id: string
+          sender_name: string
+        }
+        Update: {
+          channel_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          receiver_id?: string | null
+          sender_id?: string
+          sender_name?: string
         }
         Relationships: []
       }
@@ -179,6 +374,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integrations: {
+        Row: {
+          api_key: string | null
+          api_secret: string | null
+          company_id: string
+          config: Json | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          platform_name: string
+          platform_type: string
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string | null
+          api_secret?: string | null
+          company_id: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          platform_name: string
+          platform_type: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string | null
+          api_secret?: string | null
+          company_id?: string
+          config?: Json | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          platform_name?: string
+          platform_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       market_listings: {
         Row: {
