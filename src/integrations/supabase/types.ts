@@ -232,6 +232,7 @@ export type Database = {
           email: string | null
           first_name: string | null
           id: string
+          inn: string | null
           last_name: string | null
           phone: string | null
           position: string | null
@@ -244,6 +245,7 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id: string
+          inn?: string | null
           last_name?: string | null
           phone?: string | null
           position?: string | null
@@ -256,6 +258,7 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          inn?: string | null
           last_name?: string | null
           phone?: string | null
           position?: string | null
