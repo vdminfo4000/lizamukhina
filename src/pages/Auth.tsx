@@ -21,6 +21,9 @@ const Auth = () => {
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [inn, setInn] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +55,9 @@ const Auth = () => {
 
     const { error } = await signUp(signUpEmail, signUpPassword, {
       company_name: companyName,
+      inn: inn,
+      first_name: firstName,
+      last_name: lastName,
     });
 
     if (error) {
@@ -123,17 +129,47 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
+                  <Label htmlFor="inn">ИНН компании *</Label>
+                  <Input
+                    id="inn"
+                    placeholder="1234567890"
+                    value={inn}
+                    onChange={(e) => setInn(e.target.value)}
+                    required
+                    maxLength={12}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">Имя *</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="Василий"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Фамилия *</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Петров"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="company">Название компании</Label>
                   <Input
                     id="company"
                     placeholder="ООО Агрофирма"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">Email *</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -144,7 +180,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Пароль</Label>
+                  <Label htmlFor="signup-password">Пароль *</Label>
                   <Input
                     id="signup-password"
                     type="password"

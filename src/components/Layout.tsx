@@ -35,6 +35,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { signOut, user } = useAuth();
   const [companyName, setCompanyName] = useState<string>("Загрузка...");
+  const [userRole, setUserRole] = useState<string>("Пользователь");
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +70,17 @@ export default function Layout({ children }: LayoutProps) {
         if (company) {
           setCompanyName(company.name);
         }
+      }
+
+      // Load user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (roleData) {
+        setUserRole(roleData.role === 'admin' ? 'Администратор' : 'Пользователь');
       }
 
       // Load permissions
@@ -157,7 +169,7 @@ export default function Layout({ children }: LayoutProps) {
                 <p className="text-sm font-medium text-sidebar-foreground truncate">
                   {companyName}
                 </p>
-                <p className="text-xs text-sidebar-foreground/70">Аккаунт компании</p>
+                <p className="text-xs text-sidebar-foreground/70">{userRole}</p>
               </div>
             </div>
           </Link>
