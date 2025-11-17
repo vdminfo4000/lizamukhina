@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LayoutProps {
   children: ReactNode;
@@ -32,7 +33,34 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const [companyName, setCompanyName] = useState<string>("Загрузка...");
+
+  useEffect(() => {
+    const loadCompanyName = async () => {
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.company_id) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('name')
+          .eq('id', profile.company_id)
+          .single();
+
+        if (company) {
+          setCompanyName(company.name);
+        }
+      }
+    };
+
+    loadCompanyName();
+  }, [user]);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -85,9 +113,9 @@ export default function Layout({ children }: LayoutProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  ООО «СМП СХ»
+                  {companyName}
                 </p>
-                <p className="text-xs text-sidebar-foreground/70">Режим: ЕСХН</p>
+                <p className="text-xs text-sidebar-foreground/70">Аккаунт компании</p>
               </div>
             </div>
           </Link>
@@ -110,11 +138,7 @@ export default function Layout({ children }: LayoutProps) {
             {/* Company Info - Desktop */}
             <div className="hidden lg:block">
               <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium text-foreground">ООО «СМП СХ»</span>
-                <span className="text-muted-foreground">•</span>
-                <span className="text-muted-foreground">Режим: ЕСХН</span>
-                <span className="text-muted-foreground">•</span>
-                <span className="text-muted-foreground">Статус: Производитель продукции</span>
+                <span className="font-medium text-foreground">{companyName}</span>
               </div>
             </div>
 
