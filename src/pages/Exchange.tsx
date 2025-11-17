@@ -301,7 +301,7 @@ export default function Exchange() {
       <Tabs defaultValue="buy" className="space-y-4">
         <TabsList>
           <TabsTrigger value="buy">Купить</TabsTrigger>
-          <TabsTrigger value="sell">Продать</TabsTrigger>
+          {canEdit && <TabsTrigger value="sell">Продать</TabsTrigger>}
           <TabsTrigger value="my">Мои объявления</TabsTrigger>
         </TabsList>
 
@@ -328,7 +328,12 @@ export default function Exchange() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {listings.map((listing) => (
+                {loading ? (
+                  <p className="text-center text-muted-foreground">Загрузка...</p>
+                ) : listings.length === 0 ? (
+                  <p className="text-center text-muted-foreground">Нет доступных предложений</p>
+                ) : (
+                  listings.map((listing) => (
                   <div
                     key={listing.id}
                     className="flex items-start justify-between rounded-lg border border-border p-4"
@@ -365,7 +370,8 @@ export default function Exchange() {
                       <Button size="sm">Связаться</Button>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -378,47 +384,84 @@ export default function Exchange() {
               <CardDescription>Создайте новое предложение о продаже</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <form onSubmit={handleCreateListing} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-foreground">Культура</label>
-                    <Input placeholder="Например: Пшеница озимая" className="mt-1.5" />
+                    <Label htmlFor="crop">Культура</Label>
+                    <Input 
+                      id="crop"
+                      placeholder="Например: Пшеница озимая" 
+                      className="mt-1.5"
+                      value={newListing.crop}
+                      onChange={(e) => setNewListing({ ...newListing, crop: e.target.value })}
+                      required
+                    />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Класс/Качество</label>
-                    <Input placeholder="Например: 3 класс" className="mt-1.5" />
+                    <Label htmlFor="quality">Класс/Качество</Label>
+                    <Input 
+                      id="quality"
+                      placeholder="Например: 3 класс" 
+                      className="mt-1.5"
+                      value={newListing.quality}
+                      onChange={(e) => setNewListing({ ...newListing, quality: e.target.value })}
+                    />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Количество (т)</label>
-                    <Input type="number" placeholder="150" className="mt-1.5" />
+                    <Label htmlFor="quantity">Количество (т)</Label>
+                    <Input 
+                      id="quantity"
+                      type="number" 
+                      placeholder="150" 
+                      className="mt-1.5"
+                      value={newListing.quantity}
+                      onChange={(e) => setNewListing({ ...newListing, quantity: e.target.value })}
+                      required
+                    />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">Цена за тонну (₽)</label>
-                    <Input type="number" placeholder="18500" className="mt-1.5" />
+                    <Label htmlFor="price">Цена за тонну (₽)</Label>
+                    <Input 
+                      id="price"
+                      type="number" 
+                      placeholder="18500" 
+                      className="mt-1.5"
+                      value={newListing.price}
+                      onChange={(e) => setNewListing({ ...newListing, price: e.target.value })}
+                      required
+                    />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-foreground">Локация</label>
-                    <Input placeholder="Регион/область" className="mt-1.5" />
+                    <Label htmlFor="location">Локация</Label>
+                    <Input 
+                      id="location"
+                      placeholder="Регион/область" 
+                      className="mt-1.5"
+                      value={newListing.location}
+                      onChange={(e) => setNewListing({ ...newListing, location: e.target.value })}
+                    />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-foreground">Описание</label>
-                    <textarea
-                      className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      rows={4}
-                      placeholder="Дополнительная информация о продукции..."
+                    <Label htmlFor="harvest_year">Год урожая</Label>
+                    <Input 
+                      id="harvest_year"
+                      type="number" 
+                      placeholder={new Date().getFullYear().toString()} 
+                      className="mt-1.5"
+                      value={newListing.harvest_year}
+                      onChange={(e) => setNewListing({ ...newListing, harvest_year: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="flex gap-3">
                   {canEdit && (
-                    <Button className="gap-2">
+                    <Button type="submit" className="gap-2">
                       <Plus className="h-4 w-4" />
                       Разместить объявление
                     </Button>
                   )}
-                  <Button variant="outline">Предварительный просмотр</Button>
                 </div>
-              </div>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
@@ -431,17 +474,16 @@ export default function Exchange() {
                   <CardTitle>Мои объявления</CardTitle>
                   <CardDescription>Управление вашими предложениями</CardDescription>
                 </div>
-                {canEdit && (
-                  <Button size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Добавить
-                  </Button>
-                )}
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {myListings.map((listing) => (
+                {loading ? (
+                  <p className="text-center text-muted-foreground">Загрузка...</p>
+                ) : myListings.length === 0 ? (
+                  <p className="text-center text-muted-foreground">У вас пока нет объявлений</p>
+                ) : (
+                  myListings.map((listing) => (
                   <div
                     key={listing.id}
                     className="flex items-start justify-between rounded-lg border border-border p-4"
@@ -471,15 +513,17 @@ export default function Exchange() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Редактировать
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        Снять с публикации
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDeleteListing(listing.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
