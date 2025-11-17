@@ -158,21 +158,12 @@ export default function Employees() {
   const loadAvailableUsers = async (inn: string | null, currentCompanyId: string) => {
     if (!inn) return;
 
-    // Get all users registered with this INN who are not yet in this company
-    const { data: companiesWithInn } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('inn', inn);
-
-    if (!companiesWithInn || companiesWithInn.length === 0) return;
-
-    const companyIds = companiesWithInn.map(c => c.id);
-
-    // Get all profiles from companies with this INN
+    // Get all users registered with this INN who are not in this company
+    // RLS policy ensures admins can see all profiles with their company's INN
     const { data: allProfiles } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, email, company_id')
-      .in('company_id', companyIds);
+      .select('id, first_name, last_name, email, company_id, inn')
+      .eq('inn', inn);
 
     if (allProfiles) {
       // Filter out users who are already in the current company

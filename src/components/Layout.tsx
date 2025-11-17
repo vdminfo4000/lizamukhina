@@ -207,8 +207,8 @@ export default function Layout({ children }: LayoutProps) {
               <Button variant="ghost" size="icon" title="Уведомления">
                 <Bell className="h-5 w-5" />
               </Button>
-              <Link to="/account" className="lg:hidden">
-                <Button variant="ghost" size="icon" title="Аккаунт">
+              <Link to="/profile">
+                <Button variant="ghost" size="icon" title="Профиль">
                   <User className="h-5 w-5" />
                 </Button>
               </Link>
