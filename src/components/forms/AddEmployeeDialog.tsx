@@ -1,95 +1,96 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface AddEmployeeDialogProps {
   companyId: string;
   onSuccess: () => void;
 }
 
+interface AvailableEmployee {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  position: string | null;
+  company_id: string | null;
+}
+
 export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [availableEmployees, setAvailableEmployees] = useState<AvailableEmployee[]>([]);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    position: "",
-    role: "user" as "user" | "admin",
-  });
+  useEffect(() => {
+    if (open) {
+      loadAvailableEmployees();
+    }
+  }, [open, companyId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const loadAvailableEmployees = async () => {
     setLoading(true);
-
     try {
-      // Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            company_id: companyId,
-          },
-        },
+      // Get company INN
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('inn')
+        .eq('id', companyId)
+        .single();
+
+      if (!companyData?.inn) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить данные компании",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get all users with the same INN who are not in this company
+      const { data: employees, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone, position, company_id')
+        .eq('inn', companyData.inn)
+        .neq('company_id', companyId);
+
+      if (error) throw error;
+
+      setAvailableEmployees(employees || []);
+    } catch (error: any) {
+      toast({
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddEmployee = async (employeeId: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ company_id: companyId })
+        .eq('id', employeeId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Успешно",
+        description: "Сотрудник добавлен в компанию",
       });
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Update profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phone,
-            position: formData.position,
-            company_id: companyId,
-          })
-          .eq('id', authData.user.id);
-
-        if (profileError) throw profileError;
-
-        // Set role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: formData.role,
-          });
-
-        if (roleError) throw roleError;
-
-        toast({
-          title: "Успешно",
-          description: "Сотрудник добавлен",
-        });
-
-        setFormData({
-          email: "",
-          password: "",
-          firstName: "",
-          lastName: "",
-          phone: "",
-          position: "",
-          role: "user",
-        });
-        setOpen(false);
-        onSuccess();
-      }
+      setOpen(false);
+      onSuccess();
     } catch (error: any) {
       toast({
         title: "Ошибка",
@@ -109,103 +110,61 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
           Добавить сотрудника
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Добавить сотрудника</DialogTitle>
           <DialogDescription>
-            Создайте аккаунт для нового сотрудника компании
+            Выберите зарегистрированного сотрудника с тем же ИНН для добавления в компанию
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <Label htmlFor="firstName">Имя</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Фамилия</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                required
-              />
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
+        ) : availableEmployees.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Нет доступных сотрудников для добавления
           </div>
-
-          <div>
-            <Label htmlFor="password">Пароль</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              minLength={6}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="phone">Телефон</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="position">Должность</Label>
-            <Input
-              id="position"
-              value={formData.position}
-              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="role">Роль</Label>
-            <Select
-              value={formData.role}
-              onValueChange={(value: "user" | "admin") => setFormData({ ...formData, role: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">Сотрудник</SelectItem>
-                <SelectItem value="admin">Администратор</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Отмена
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Добавление..." : "Добавить"}
-            </Button>
-          </div>
-        </form>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ФИО</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Телефон</TableHead>
+                <TableHead>Должность</TableHead>
+                <TableHead>Статус</TableHead>
+                <TableHead className="w-[100px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {availableEmployees.map((employee) => (
+                <TableRow key={employee.id}>
+                  <TableCell>
+                    {employee.first_name} {employee.last_name}
+                  </TableCell>
+                  <TableCell>{employee.email}</TableCell>
+                  <TableCell>{employee.phone || '—'}</TableCell>
+                  <TableCell>{employee.position || '—'}</TableCell>
+                  <TableCell>
+                    <Badge variant={employee.company_id ? "secondary" : "outline"}>
+                      {employee.company_id ? 'В другой компании' : 'Без компании'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddEmployee(employee.id)}
+                      disabled={loading}
+                    >
+                      Добавить
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </DialogContent>
     </Dialog>
   );
