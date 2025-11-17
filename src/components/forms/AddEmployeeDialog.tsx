@@ -79,12 +79,20 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
   const handleAddEmployee = async (employeeId: string) => {
     setLoading(true);
     try {
-      const { error } = await supabase
+      console.log('Adding employee:', { employeeId, companyId });
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update({ company_id: companyId })
-        .eq('id', employeeId);
+        .eq('id', employeeId)
+        .select();
 
-      if (error) throw error;
+      console.log('Update result:', { data, error });
+
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
 
       toast({
         title: "Успешно",
@@ -97,9 +105,10 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
       // Then close the dialog and reload available employees
       setOpen(false);
     } catch (error: any) {
+      console.error('handleAddEmployee error:', error);
       toast({
         title: "Ошибка",
-        description: error.message,
+        description: error.message || "Не удалось добавить сотрудника",
         variant: "destructive",
       });
     } finally {
