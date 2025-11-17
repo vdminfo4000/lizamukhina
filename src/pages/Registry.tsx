@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Search, Warehouse, Tractor, Trash2 } from "lucide-react";
+import { MapPin, Search, Warehouse, Tractor, Trash2, Edit, Info, Settings } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,19 @@ import { useToast } from "@/hooks/use-toast";
 import { AddPlotDialog } from "@/components/forms/AddPlotDialog";
 import { AddEquipmentDialog } from "@/components/forms/AddEquipmentDialog";
 import { AddFacilityDialog } from "@/components/forms/AddFacilityDialog";
+import { EditPlotDialog } from "@/components/forms/EditPlotDialog";
+import { EditEquipmentDialog } from "@/components/forms/EditEquipmentDialog";
+import { EditFacilityDialog } from "@/components/forms/EditFacilityDialog";
+import { IntegrationsDialog } from "@/components/forms/IntegrationsDialog";
+import { AssetCommentsDialog } from "@/components/forms/AssetCommentsDialog";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Plot {
   id: string;
@@ -53,6 +65,16 @@ export default function Registry() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { canView, canEdit, loading: accessLoading } = useModuleAccess('registry');
+
+  const [editingPlot, setEditingPlot] = useState<Plot | null>(null);
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+  const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
+  const [integrationsOpen, setIntegrationsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<{
+    type: "plot" | "equipment" | "facility";
+    id: string;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -164,6 +186,32 @@ export default function Registry() {
     }
   };
 
+  const toggleStatus = async (type: "plot" | "equipment" | "facility", id: string, currentStatus: string) => {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+    const table = type === "plot" ? "plots" : type === "equipment" ? "equipment" : "facilities";
+
+    const { error } = await supabase.from(table).update({ status: newStatus }).eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось изменить статус",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Успешно",
+        description: `Статус изменен на ${newStatus === "active" ? "Активен" : "Не активен"}`,
+      });
+      loadData();
+    }
+  };
+
+  const showComments = (type: "plot" | "equipment" | "facility", id: string) => {
+    setSelectedAsset({ type, id });
+    setCommentsOpen(true);
+  };
+
   const totalArea = plots.reduce((sum, plot) => sum + Number(plot.area), 0);
 
   const filteredPlots = plots.filter((item) =>
@@ -252,11 +300,19 @@ export default function Registry() {
 
       {/* Tabs */}
       <Tabs defaultValue="plots" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="plots">Участки</TabsTrigger>
-          <TabsTrigger value="equipment">Техника</TabsTrigger>
-          <TabsTrigger value="facilities">Объекты</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="plots">Участки</TabsTrigger>
+            <TabsTrigger value="equipment">Техника</TabsTrigger>
+            <TabsTrigger value="facilities">Объекты</TabsTrigger>
+          </TabsList>
+          {companyId && canEdit && (
+            <Button variant="outline" onClick={() => setIntegrationsOpen(true)}>
+              <Settings className="w-4 h-4 mr-2" />
+              Интеграции
+            </Button>
+          )}
+        </div>
 
         <TabsContent value="plots" className="space-y-4">
           <Card className="shadow-card">
@@ -442,6 +498,55 @@ export default function Registry() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Dialogs */}
+      {editingPlot && (
+        <EditPlotDialog
+          plot={editingPlot}
+          open={!!editingPlot}
+          onOpenChange={(open) => !open && setEditingPlot(null)}
+          onSuccess={loadData}
+        />
+      )}
+      {editingEquipment && (
+        <EditEquipmentDialog
+          equipment={editingEquipment}
+          open={!!editingEquipment}
+          onOpenChange={(open) => !open && setEditingEquipment(null)}
+          onSuccess={loadData}
+        />
+      )}
+      {editingFacility && (
+        <EditFacilityDialog
+          facility={editingFacility}
+          open={!!editingFacility}
+          onOpenChange={(open) => !open && setEditingFacility(null)}
+          onSuccess={loadData}
+        />
+      )}
+
+      {/* Integrations Dialog */}
+      {companyId && (
+        <IntegrationsDialog
+          companyId={companyId}
+          open={integrationsOpen}
+          onOpenChange={setIntegrationsOpen}
+        />
+      )}
+
+      {/* Comments Dialog */}
+      {selectedAsset && companyId && (
+        <AssetCommentsDialog
+          assetType={selectedAsset.type}
+          assetId={selectedAsset.id}
+          companyId={companyId}
+          open={commentsOpen}
+          onOpenChange={(open) => {
+            setCommentsOpen(open);
+            if (!open) setSelectedAsset(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import Employees from "./pages/Employees";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import CRM from "./pages/CRM";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <Profile />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/crm" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CRM />
                 </Layout>
               </ProtectedRoute>
             } />
