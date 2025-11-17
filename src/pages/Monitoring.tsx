@@ -78,7 +78,7 @@ export default function Monitoring() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensors, setSensors] = useState<Sensor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [newZone, setNewZone] = useState({ name: "", description: "", plot_id: "" });
   const [newSensor, setNewSensor] = useState({ 
@@ -166,7 +166,7 @@ export default function Monitoring() {
     }
   };
 
-  const handleAddZone = async (e: React.FormEvent) => {
+  const handleAddZone = async (e: React.FormEvent, plotId: string) => {
     e.preventDefault();
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -186,7 +186,7 @@ export default function Monitoring() {
         company_id: profile.company_id,
         name: newZone.name,
         description: newZone.description || null,
-        plot_id: newZone.plot_id || null,
+        plot_id: plotId,
       });
 
     if (error) {
@@ -340,19 +340,11 @@ export default function Monitoring() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="mb-2 text-3xl font-bold text-foreground">Мониторинг урожая</h1>
-          <p className="text-muted-foreground">
-            Отслеживание состояния посевов и готовности к уборке
-          </p>
-        </div>
-        {canEdit && (
-          <Button onClick={() => setConfigDialogOpen(true)}>
-            <Settings className="mr-2 h-4 w-4" />
-            Настроить
-          </Button>
-        )}
+      <div>
+        <h1 className="mb-2 text-3xl font-bold text-foreground">Мониторинг урожая</h1>
+        <p className="text-muted-foreground">
+          Отслеживание состояния посевов и готовности к уборке
+        </p>
       </div>
 
       {/* Stats Cards */}
@@ -420,39 +412,232 @@ export default function Monitoring() {
         </TabsList>
 
         <TabsContent value="sensors" className="space-y-4">
-          {sensorData.map((data, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{data.plot}</CardTitle>
-                    <CardDescription>Площадь: {data.area} га</CardDescription>
+          {sensorData.map((data, index) => {
+            const plot = plots[index];
+            const plotZones = zones.filter(z => z.plot_id === plot.id);
+            const plotSensors = sensors.filter(s => plotZones.some(z => z.id === s.zone_id));
+            
+            return (
+              <Card key={index}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>{data.plot}</CardTitle>
+                      <CardDescription>Площадь: {data.area} га</CardDescription>
+                    </div>
+                    {canEdit && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedPlotId(plot.id)}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            Настроить датчики
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Настройка зон и датчиков</DialogTitle>
+                            <DialogDescription>
+                              Управление зонами мониторинга и датчиками для {data.plot}
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          <div className="space-y-6 py-4">
+                            {/* Добавление зоны */}
+                            <div>
+                              <h3 className="font-semibold mb-3">Добавить зону мониторинга</h3>
+                              <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handleAddZone(e, plot.id);
+                              }} className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label htmlFor="zone_name">Название зоны</Label>
+                                    <Input
+                                      id="zone_name"
+                                      placeholder="Например: Зона 1"
+                                      value={newZone.name}
+                                      onChange={(e) => setNewZone({ ...newZone, name: e.target.value })}
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="zone_description">Описание</Label>
+                                    <Input
+                                      id="zone_description"
+                                      placeholder="Описание зоны"
+                                      value={newZone.description}
+                                      onChange={(e) => setNewZone({ ...newZone, description: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+                                <Button type="submit" size="sm">
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Добавить зону
+                                </Button>
+                              </form>
+                            </div>
+
+                            {/* Список зон участка */}
+                            <div>
+                              <h3 className="font-semibold mb-3">Зоны мониторинга</h3>
+                              {plotZones.length === 0 ? (
+                                <p className="text-muted-foreground text-sm">Зоны не добавлены</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {plotZones.map((zone) => (
+                                    <Card key={zone.id}>
+                                      <CardContent className="p-3">
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <p className="font-medium">{zone.name}</p>
+                                            {zone.description && (
+                                              <p className="text-sm text-muted-foreground">{zone.description}</p>
+                                            )}
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDeleteZone(zone.id)}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Добавление датчика */}
+                            <div>
+                              <h3 className="font-semibold mb-3">Добавить датчик</h3>
+                              <form onSubmit={handleAddSensor} className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label htmlFor="sensor_zone">Зона</Label>
+                                    <Select 
+                                      value={selectedZone || ''} 
+                                      onValueChange={setSelectedZone}
+                                      required
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Выберите зону" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {plotZones.map((zone) => (
+                                          <SelectItem key={zone.id} value={zone.id}>
+                                            {zone.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="sensor_name">Название датчика</Label>
+                                    <Input
+                                      id="sensor_name"
+                                      placeholder="Датчик влажности 1"
+                                      value={newSensor.name}
+                                      onChange={(e) => setNewSensor({ ...newSensor, name: e.target.value })}
+                                      required
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="sensor_type">Тип датчика</Label>
+                                    <Select 
+                                      value={newSensor.sensor_type} 
+                                      onValueChange={(value) => setNewSensor({ ...newSensor, sensor_type: value })}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="moisture">Влажность почвы</SelectItem>
+                                        <SelectItem value="temperature">Температура</SelectItem>
+                                        <SelectItem value="ph">pH почвы</SelectItem>
+                                        <SelectItem value="light">Освещенность</SelectItem>
+                                        <SelectItem value="wind">Ветер</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="sensor_serial">Серийный номер</Label>
+                                    <Input
+                                      id="sensor_serial"
+                                      placeholder="SN001"
+                                      value={newSensor.serial_number}
+                                      onChange={(e) => setNewSensor({ ...newSensor, serial_number: e.target.value })}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="sensor_battery">Уровень батареи (%)</Label>
+                                    <Input
+                                      id="sensor_battery"
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      placeholder="100"
+                                      value={newSensor.battery_level}
+                                      onChange={(e) => setNewSensor({ ...newSensor, battery_level: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+                                <Button type="submit" size="sm">
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Добавить датчик
+                                </Button>
+                              </form>
+                            </div>
+
+                            {/* Список датчиков участка */}
+                            <div>
+                              <h3 className="font-semibold mb-3">Датчики</h3>
+                              {plotSensors.length === 0 ? (
+                                <p className="text-muted-foreground text-sm">Датчики не добавлены</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {plotZones.map((zone) => {
+                                    const zoneSensors = sensors.filter(s => s.zone_id === zone.id);
+                                    if (zoneSensors.length === 0) return null;
+                                    
+                                    return (
+                                      <div key={zone.id}>
+                                        <p className="text-sm font-medium mb-2">{zone.name}</p>
+                                        {zoneSensors.map((sensor) => (
+                                          <Card key={sensor.id} className="mb-2">
+                                            <CardContent className="p-3">
+                                              <div className="flex items-center justify-between">
+                                                <div>
+                                                  <p className="font-medium">{sensor.name}</p>
+                                                  <p className="text-sm text-muted-foreground">
+                                                    {sensor.sensor_type} • {sensor.serial_number || 'Без номера'}
+                                                    {sensor.battery_level && ` • Батарея: ${sensor.battery_level}%`}
+                                                  </p>
+                                                </div>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => handleDeleteSensor(sensor.id)}
+                                                >
+                                                  <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            </CardContent>
+                                          </Card>
+                                        ))}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
-                  {canEdit && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Settings className="mr-2 h-4 w-4" />
-                          Настроить
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Настройки датчиков</DialogTitle>
-                          <DialogDescription>
-                            Управление датчиками для {data.plot}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <p className="text-sm text-muted-foreground">
-                            Настройка датчиков будет доступна после подключения оборудования
-                          </p>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
-              </CardHeader>
+                </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   {data.sensors.map((sensor, sIndex) => (
@@ -471,8 +656,9 @@ export default function Monitoring() {
                   ))}
                 </div>
               </CardContent>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </TabsContent>
 
         <TabsContent value="maturity" className="space-y-4">
@@ -621,220 +807,6 @@ export default function Monitoring() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Zone and Sensor Configuration Dialog */}
-      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Управление зонами и датчиками</DialogTitle>
-            <DialogDescription>
-              Создавайте зоны мониторинга и добавляйте датчики
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Tabs defaultValue="zones" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="zones">Зоны мониторинга</TabsTrigger>
-              <TabsTrigger value="sensors">Датчики</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="zones" className="space-y-4">
-              <form onSubmit={handleAddZone} className="space-y-4 p-4 border rounded-lg">
-                <h3 className="font-semibold">Добавить новую зону</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label htmlFor="zone_name">Название зоны</Label>
-                    <Input
-                      id="zone_name"
-                      placeholder="Например: Западная часть поля"
-                      value={newZone.name}
-                      onChange={(e) => setNewZone({ ...newZone, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="zone_plot">Участок (опционально)</Label>
-                    <Select 
-                      value={newZone.plot_id} 
-                      onValueChange={(value) => setNewZone({ ...newZone, plot_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите участок" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {plots.map((plot) => (
-                          <SelectItem key={plot.id} value={plot.id}>
-                            {plot.crop || 'Участок'} ({plot.cadastral_number})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="zone_description">Описание</Label>
-                    <Input
-                      id="zone_description"
-                      placeholder="Дополнительная информация"
-                      value={newZone.description}
-                      onChange={(e) => setNewZone({ ...newZone, description: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <Button type="submit">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Добавить зону
-                </Button>
-              </form>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold">Существующие зоны</h3>
-                {zones.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Зоны не созданы</p>
-                ) : (
-                  zones.map((zone) => (
-                    <div key={zone.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{zone.name}</p>
-                        {zone.description && (
-                          <p className="text-sm text-muted-foreground">{zone.description}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteZone(zone.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="sensors" className="space-y-4">
-              <form onSubmit={handleAddSensor} className="space-y-4 p-4 border rounded-lg">
-                <h3 className="font-semibold">Добавить новый датчик</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <Label htmlFor="sensor_zone">Зона</Label>
-                    <Select 
-                      value={selectedZone || ''} 
-                      onValueChange={setSelectedZone}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите зону" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {zones.map((zone) => (
-                          <SelectItem key={zone.id} value={zone.id}>
-                            {zone.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="sensor_name">Название датчика</Label>
-                    <Input
-                      id="sensor_name"
-                      placeholder="Например: Датчик влажности 1"
-                      value={newSensor.name}
-                      onChange={(e) => setNewSensor({ ...newSensor, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="sensor_type">Тип датчика</Label>
-                    <Select 
-                      value={newSensor.sensor_type} 
-                      onValueChange={(value) => setNewSensor({ ...newSensor, sensor_type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="moisture">Влажность почвы</SelectItem>
-                        <SelectItem value="temperature">Температура</SelectItem>
-                        <SelectItem value="ph">pH почвы</SelectItem>
-                        <SelectItem value="light">Освещенность</SelectItem>
-                        <SelectItem value="wind">Ветер</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="sensor_serial">Серийный номер</Label>
-                    <Input
-                      id="sensor_serial"
-                      placeholder="SN001"
-                      value={newSensor.serial_number}
-                      onChange={(e) => setNewSensor({ ...newSensor, serial_number: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="sensor_battery">Уровень батареи (%)</Label>
-                    <Input
-                      id="sensor_battery"
-                      type="number"
-                      min="0"
-                      max="100"
-                      placeholder="100"
-                      value={newSensor.battery_level}
-                      onChange={(e) => setNewSensor({ ...newSensor, battery_level: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <Button type="submit">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Добавить датчик
-                </Button>
-              </form>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold">Существующие датчики</h3>
-                {sensors.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Датчики не добавлены</p>
-                ) : (
-                  <div className="space-y-2">
-                    {zones.map((zone) => {
-                      const zoneSensors = sensors.filter(s => s.zone_id === zone.id);
-                      if (zoneSensors.length === 0) return null;
-                      
-                      return (
-                        <div key={zone.id} className="border rounded-lg p-4">
-                          <h4 className="font-medium mb-2">{zone.name}</h4>
-                          <div className="space-y-2">
-                            {zoneSensors.map((sensor) => (
-                              <div key={sensor.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                                <div className="flex-1">
-                                  <p className="font-medium">{sensor.name}</p>
-                                  <div className="flex gap-4 text-sm text-muted-foreground">
-                                    <span>Тип: {sensor.sensor_type}</span>
-                                    {sensor.serial_number && <span>SN: {sensor.serial_number}</span>}
-                                    {sensor.battery_level && <span>Батарея: {sensor.battery_level}%</span>}
-                                  </div>
-                                </div>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDeleteSensor(sensor.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
