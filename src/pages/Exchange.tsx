@@ -100,6 +100,8 @@ export default function Exchange() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editListing, setEditListing] = useState<Listing | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -119,9 +121,20 @@ export default function Exchange() {
 
   useEffect(() => {
     if (user && canView) {
-      loadListings();
+    loadListings();
+    loadMyListings();
     }
   }, [user, canView]);
+
+  const loadMyListings = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("market_listings")
+      .select(`*, companies(name, inn, ogrn, phone, email, legal_address, address)`)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (data) setMyListings(data);
+  };
 
   const loadListings = async () => {
     try {
@@ -639,57 +652,56 @@ export default function Exchange() {
 
       {/* Contact Dialog */}
       <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Контактная информация</DialogTitle>
-            <DialogDescription>Информация о компании продавца</DialogDescription>
           </DialogHeader>
-          {selectedListing?.companies && (
+          {selectedListing && (
             <div className="space-y-3">
               <div>
-                <Label className="text-muted-foreground">Наименование организации</Label>
-                <p className="text-foreground font-medium">{selectedListing.companies.name}</p>
+                <span className="font-semibold">Организация:</span>{" "}
+                {selectedListing.companies?.name}
               </div>
-              {selectedListing.companies.inn && (
-                <div>
-                  <Label className="text-muted-foreground">ИНН</Label>
-                  <p className="text-foreground font-medium">{selectedListing.companies.inn}</p>
-                </div>
-              )}
-              {selectedListing.companies.ogrn && (
-                <div>
-                  <Label className="text-muted-foreground">ОГРН</Label>
-                  <p className="text-foreground font-medium">{selectedListing.companies.ogrn}</p>
-                </div>
-              )}
-              {selectedListing.companies.phone && (
-                <div>
-                  <Label className="text-muted-foreground">Телефон</Label>
-                  <p className="text-foreground font-medium">{selectedListing.companies.phone}</p>
-                </div>
-              )}
-              {selectedListing.companies.email && (
-                <div>
-                  <Label className="text-muted-foreground">Email</Label>
-                  <p className="text-foreground font-medium">{selectedListing.companies.email}</p>
-                </div>
-              )}
-              {selectedListing.companies.legal_address && (
-                <div>
-                  <Label className="text-muted-foreground">Юридический адрес</Label>
-                  <p className="text-foreground font-medium">{selectedListing.companies.legal_address}</p>
-                </div>
-              )}
-              {selectedListing.companies.address && (
-                <div>
-                  <Label className="text-muted-foreground">Фактический адрес</Label>
-                  <p className="text-foreground font-medium">{selectedListing.companies.address}</p>
-                </div>
-              )}
+              <Separator />
+              <div>
+                <span className="font-semibold">ИНН:</span> {selectedListing.companies?.inn || "Не указан"}
+              </div>
+              <div>
+                <span className="font-semibold">ОГРН:</span> {selectedListing.companies?.ogrn || "Не указан"}
+              </div>
+              <Separator />
+              <div>
+                <span className="font-semibold">Телефон:</span> {selectedListing.companies?.phone || "Не указан"}
+              </div>
+              <div>
+                <span className="font-semibold">Email:</span> {selectedListing.companies?.email || "Не указан"}
+              </div>
+              <Separator />
+              <div>
+                <span className="font-semibold">Юридический адрес:</span>{" "}
+                {selectedListing.companies?.legal_address || "Не указан"}
+              </div>
+              <div>
+                <span className="font-semibold">Фактический адрес:</span>{" "}
+                {selectedListing.companies?.address || "Не указан"}
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+
+      {editListing && (
+        <EditListingDialog
+          listing={editListing}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSuccess={() => {
+            loadMyListings();
+            setEditListing(null);
+          }}
+        />
+      )}
     </div>
   );
 }

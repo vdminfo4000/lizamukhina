@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Mail, FileText, Users, Send, Upload } from "lucide-react";
+import { MessageSquare, Mail, FileText, Users, Send, Upload, BarChart3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface Message {
   id: string;
@@ -88,9 +89,106 @@ export default function CRM() {
     notes: "",
   });
 
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [analytics, setAnalytics] = useState({
+    totalMessages: 0,
+    unreadMessages: 0,
+    totalEmails: 0,
+    unreadEmails: 0,
+    totalDocuments: 0,
+    totalContacts: 0,
+  });
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (companyId) {
+      setupRealtime();
+    }
+  }, [companyId]);
+
+  const setupRealtime = () => {
+    if (!companyId) return;
+
+    const messagesChannel = supabase
+      .channel('crm-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'crm_messages',
+          filter: `company_id=eq.${companyId}`
+        },
+        () => {
+          loadMessages(companyId);
+          loadAnalytics();
+        }
+      )
+      .subscribe();
+
+    const emailsChannel = supabase
+      .channel('crm-emails-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'crm_emails',
+          filter: `company_id=eq.${companyId}`
+        },
+        () => {
+          loadEmails(companyId);
+          loadAnalytics();
+        }
+      )
+      .subscribe();
+
+    const documentsChannel = supabase
+      .channel('crm-documents-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'crm_documents',
+          filter: `company_id=eq.${companyId}`
+        },
+        () => {
+          loadDocuments(companyId);
+          loadAnalytics();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(emailsChannel);
+      supabase.removeChannel(documentsChannel);
+    };
+  };
+
+  const loadAnalytics = async () => {
+    if (!companyId) return;
+
+    const [messagesRes, emailsRes, documentsRes, contactsRes] = await Promise.all([
+      supabase.from("crm_messages").select("id, is_read", { count: "exact" }).eq("company_id", companyId),
+      supabase.from("crm_emails").select("id, is_read", { count: "exact" }).eq("company_id", companyId),
+      supabase.from("crm_documents").select("id", { count: "exact" }).eq("company_id", companyId),
+      supabase.from("crm_contacts").select("id", { count: "exact" }).eq("company_id", companyId),
+    ]);
+
+    setAnalytics({
+      totalMessages: messagesRes.count || 0,
+      unreadMessages: messagesRes.data?.filter(m => !m.is_read).length || 0,
+      totalEmails: emailsRes.count || 0,
+      unreadEmails: emailsRes.data?.filter(e => !e.is_read).length || 0,
+      totalDocuments: documentsRes.count || 0,
+      totalContacts: contactsRes.count || 0,
+    });
+  };
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -122,6 +220,7 @@ export default function CRM() {
     loadEmails(profile.company_id);
     loadDocuments(profile.company_id);
     loadContacts(profile.company_id);
+    loadAnalytics();
   };
 
   const loadMessages = async (companyId: string) => {
@@ -152,6 +251,54 @@ export default function CRM() {
       .order("created_at", { ascending: false });
 
     if (data) setDocuments(data);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !companyId || !userId) return;
+
+    setUploadingFile(true);
+    const fileName = `${userId}/${Date.now()}_${file.name}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("crm-documents")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("crm-documents")
+        .getPublicUrl(fileName);
+
+      const { error: dbError } = await supabase.from("crm_documents").insert({
+        company_id: companyId,
+        file_name: file.name,
+        file_url: urlData.publicUrl,
+        file_size: file.size,
+        file_type: file.type,
+        uploaded_by: userId,
+        uploader_name: userName,
+      });
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Успешно",
+        description: "Файл загружен",
+      });
+
+      loadDocuments(companyId);
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить файл",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFile(false);
+      event.target.value = "";
+    }
   };
 
   const loadContacts = async (companyId: string) => {
