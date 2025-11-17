@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, TrendingUp, TrendingDown, Plus, Trash2 } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, Plus, Trash2, Info, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const marketPrices = [
   { crop: "Пшеница", price: "18,500₽", change: "+2.3%", trend: "up", volume: "2,450 т" },
@@ -69,7 +70,17 @@ interface Listing {
   views: number;
   inquiries: number;
   created_at: string;
+  additional_info: string | null;
   seller?: string;
+  companies?: {
+    name: string;
+    inn?: string;
+    ogrn?: string;
+    phone?: string;
+    email?: string;
+    legal_address?: string;
+    address?: string;
+  };
 }
 
 export default function Exchange() {
@@ -84,7 +95,11 @@ export default function Exchange() {
     price: "",
     location: "",
     harvest_year: new Date().getFullYear().toString(),
+    additional_info: "",
   });
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -117,7 +132,15 @@ export default function Exchange() {
         .from('market_listings')
         .select(`
           *,
-          companies!market_listings_company_id_fkey (name)
+          companies!market_listings_company_id_fkey (
+            name,
+            inn,
+            ogrn,
+            phone,
+            email,
+            legal_address,
+            address
+          )
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
@@ -184,6 +207,7 @@ export default function Exchange() {
           price: parseFloat(newListing.price),
           location: newListing.location || null,
           harvest_year: parseInt(newListing.harvest_year) || null,
+          additional_info: newListing.additional_info || null,
           unit: 'т',
           status: 'active',
         });
@@ -212,6 +236,7 @@ export default function Exchange() {
         price: "",
         location: "",
         harvest_year: new Date().getFullYear().toString(),
+        additional_info: "",
       });
 
       loadListings();
@@ -364,10 +389,27 @@ export default function Exchange() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedListing(listing);
+                          setDetailsDialogOpen(true);
+                        }}
+                      >
+                        <Info className="h-4 w-4 mr-1" />
                         Подробнее
                       </Button>
-                      <Button size="sm">Связаться</Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedListing(listing);
+                          setContactDialogOpen(true);
+                        }}
+                      >
+                        <Phone className="h-4 w-4 mr-1" />
+                        Связаться
+                      </Button>
                     </div>
                   </div>
                   ))
@@ -452,6 +494,17 @@ export default function Exchange() {
                       onChange={(e) => setNewListing({ ...newListing, harvest_year: e.target.value })}
                     />
                   </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="additional_info">Дополнительная информация</Label>
+                    <Textarea 
+                      id="additional_info"
+                      placeholder="Дополнительные сведения о товаре, условиях доставки и т.д." 
+                      className="mt-1.5"
+                      value={newListing.additional_info}
+                      onChange={(e) => setNewListing({ ...newListing, additional_info: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   {canEdit && (
@@ -529,6 +582,114 @@ export default function Exchange() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Детали объявления</DialogTitle>
+            <DialogDescription>Полная информация о предложении</DialogDescription>
+          </DialogHeader>
+          {selectedListing && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Культура</Label>
+                  <p className="text-foreground font-medium">{selectedListing.crop}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Класс/Качество</Label>
+                  <p className="text-foreground font-medium">{selectedListing.quality || 'Не указано'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Количество</Label>
+                  <p className="text-foreground font-medium">{selectedListing.quantity} {selectedListing.unit}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Цена</Label>
+                  <p className="text-foreground font-medium">{selectedListing.price} ₽/{selectedListing.unit}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Локация</Label>
+                  <p className="text-foreground font-medium">{selectedListing.location || 'Не указана'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Год урожая</Label>
+                  <p className="text-foreground font-medium">{selectedListing.harvest_year || 'Не указан'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Продавец</Label>
+                  <p className="text-foreground font-medium">{selectedListing.seller}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Просмотры</Label>
+                  <p className="text-foreground font-medium">{selectedListing.views}</p>
+                </div>
+              </div>
+              {selectedListing.additional_info && (
+                <div>
+                  <Label className="text-muted-foreground">Дополнительная информация</Label>
+                  <p className="text-foreground mt-2 whitespace-pre-wrap">{selectedListing.additional_info}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Contact Dialog */}
+      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Контактная информация</DialogTitle>
+            <DialogDescription>Информация о компании продавца</DialogDescription>
+          </DialogHeader>
+          {selectedListing?.companies && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-muted-foreground">Наименование организации</Label>
+                <p className="text-foreground font-medium">{selectedListing.companies.name}</p>
+              </div>
+              {selectedListing.companies.inn && (
+                <div>
+                  <Label className="text-muted-foreground">ИНН</Label>
+                  <p className="text-foreground font-medium">{selectedListing.companies.inn}</p>
+                </div>
+              )}
+              {selectedListing.companies.ogrn && (
+                <div>
+                  <Label className="text-muted-foreground">ОГРН</Label>
+                  <p className="text-foreground font-medium">{selectedListing.companies.ogrn}</p>
+                </div>
+              )}
+              {selectedListing.companies.phone && (
+                <div>
+                  <Label className="text-muted-foreground">Телефон</Label>
+                  <p className="text-foreground font-medium">{selectedListing.companies.phone}</p>
+                </div>
+              )}
+              {selectedListing.companies.email && (
+                <div>
+                  <Label className="text-muted-foreground">Email</Label>
+                  <p className="text-foreground font-medium">{selectedListing.companies.email}</p>
+                </div>
+              )}
+              {selectedListing.companies.legal_address && (
+                <div>
+                  <Label className="text-muted-foreground">Юридический адрес</Label>
+                  <p className="text-foreground font-medium">{selectedListing.companies.legal_address}</p>
+                </div>
+              )}
+              {selectedListing.companies.address && (
+                <div>
+                  <Label className="text-muted-foreground">Фактический адрес</Label>
+                  <p className="text-foreground font-medium">{selectedListing.companies.address}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
