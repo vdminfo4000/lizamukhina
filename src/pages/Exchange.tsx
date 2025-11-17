@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, TrendingUp, TrendingDown, Plus } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
-import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuditLog } from "@/hooks/useAuditLog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const marketPrices = [
   { crop: "Пшеница", price: "18,500₽", change: "+2.3%", trend: "up", volume: "2,450 т" },
@@ -50,23 +54,42 @@ const listings = [
   },
 ];
 
-const myListings = [
-  {
-    id: 1,
-    crop: "Пшеница озимая",
-    quantity: "120 т",
-    price: "18,500₽/т",
-    views: 145,
-    inquiries: 8,
-    status: "active",
-  },
-];
+interface Listing {
+  id: string;
+  company_id: string;
+  user_id: string;
+  crop: string;
+  quality: string | null;
+  quantity: number;
+  unit: string;
+  price: number;
+  location: string | null;
+  harvest_year: number | null;
+  status: string;
+  views: number;
+  inquiries: number;
+  created_at: string;
+  seller?: string;
+}
 
 export default function Exchange() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [myListings, setMyListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newListing, setNewListing] = useState({
+    crop: "",
+    quality: "",
+    quantity: "",
+    price: "",
+    location: "",
+    harvest_year: new Date().getFullYear().toString(),
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { canView, canEdit, loading: accessLoading } = useModuleAccess('exchange');
+  const { logAction } = useAuditLog();
 
   useEffect(() => {
     if (!accessLoading && !canView) {
@@ -78,6 +101,164 @@ export default function Exchange() {
       navigate('/');
     }
   }, [accessLoading, canView, navigate, toast]);
+
+  useEffect(() => {
+    if (user && canView) {
+      loadListings();
+    }
+  }, [user, canView]);
+
+  const loadListings = async () => {
+    try {
+      setLoading(true);
+      
+      // Load all active listings from all companies
+      const { data: allListings, error: listingsError } = await supabase
+        .from('market_listings')
+        .select(`
+          *,
+          companies!market_listings_company_id_fkey (name)
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (listingsError) throw listingsError;
+
+      // Load user's own listings
+      const { data: userListings, error: userListingsError } = await supabase
+        .from('market_listings')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (userListingsError) throw userListingsError;
+
+      const formattedListings = (allListings || []).map((listing: any) => ({
+        ...listing,
+        seller: listing.companies?.name || 'Неизвестно',
+      }));
+
+      setListings(formattedListings);
+      setMyListings(userListings || []);
+    } catch (error: any) {
+      console.error('Error loading listings:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить объявления',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateListing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) return;
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.company_id) {
+        toast({
+          title: 'Ошибка',
+          description: 'Не удалось определить компанию',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('market_listings')
+        .insert({
+          user_id: user.id,
+          company_id: profile.company_id,
+          crop: newListing.crop,
+          quality: newListing.quality || null,
+          quantity: parseFloat(newListing.quantity),
+          price: parseFloat(newListing.price),
+          location: newListing.location || null,
+          harvest_year: parseInt(newListing.harvest_year) || null,
+          unit: 'т',
+          status: 'active',
+        });
+
+      if (error) throw error;
+
+      await logAction({
+        action: 'create',
+        module: 'exchange',
+        entityType: 'market_listing',
+        details: {
+          crop: newListing.crop,
+          quantity: newListing.quantity,
+        },
+      });
+
+      toast({
+        title: 'Успешно',
+        description: 'Объявление создано',
+      });
+
+      setNewListing({
+        crop: "",
+        quality: "",
+        quantity: "",
+        price: "",
+        location: "",
+        harvest_year: new Date().getFullYear().toString(),
+      });
+
+      loadListings();
+    } catch (error: any) {
+      console.error('Error creating listing:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать объявление',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteListing = async (listingId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('market_listings')
+        .delete()
+        .eq('id', listingId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await logAction({
+        action: 'delete',
+        module: 'exchange',
+        entityType: 'market_listing',
+        entityId: listingId,
+      });
+
+      toast({
+        title: 'Успешно',
+        description: 'Объявление удалено',
+      });
+
+      loadListings();
+    } catch (error: any) {
+      console.error('Error deleting listing:', error);
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось удалить объявление',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
