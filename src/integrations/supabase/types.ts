@@ -273,7 +273,7 @@ export type Database = {
       }
       user_permissions: {
         Row: {
-          can_access: boolean
+          access_level: Database["public"]["Enums"]["access_level"]
           created_at: string
           id: string
           module: string
@@ -281,7 +281,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          can_access?: boolean
+          access_level?: Database["public"]["Enums"]["access_level"]
           created_at?: string
           id?: string
           module: string
@@ -289,7 +289,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          can_access?: boolean
+          access_level?: Database["public"]["Enums"]["access_level"]
           created_at?: string
           id?: string
           module?: string
@@ -334,6 +334,7 @@ export type Database = {
       }
     }
     Enums: {
+      access_level: "closed" | "view" | "edit"
       app_role: "admin" | "user"
     }
     CompositeTypes: {
@@ -462,6 +463,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      access_level: ["closed", "view", "edit"],
       app_role: ["admin", "user"],
     },
   },

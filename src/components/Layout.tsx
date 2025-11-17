@@ -36,7 +36,7 @@ export default function Layout({ children }: LayoutProps) {
   const { signOut, user } = useAuth();
   const [companyName, setCompanyName] = useState<string>("Загрузка...");
   const [userRole, setUserRole] = useState<string>("Пользователь");
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+  const [permissions, setPermissions] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   // Map navigation routes to module IDs
@@ -86,20 +86,20 @@ export default function Layout({ children }: LayoutProps) {
       // Load permissions
       const { data: permissionsData } = await supabase
         .from('user_permissions')
-        .select('module, can_access')
+        .select('module, access_level')
         .eq('user_id', user.id);
 
-      const permissionsMap: Record<string, boolean> = {};
+      const permissionsMap: Record<string, string> = {};
       
-      // Default all modules to true (allowed) for admins and when no permissions set
+      // Default all modules to 'edit' (full access) for admins and when no permissions set
       Object.values(routeToModule).forEach(module => {
-        permissionsMap[module] = true;
+        permissionsMap[module] = 'edit';
       });
 
       // Override with actual permissions
       if (permissionsData && permissionsData.length > 0) {
         permissionsData.forEach(perm => {
-          permissionsMap[perm.module] = perm.can_access;
+          permissionsMap[perm.module] = perm.access_level;
         });
       }
 
@@ -110,10 +110,10 @@ export default function Layout({ children }: LayoutProps) {
     loadUserData();
   }, [user]);
 
-  // Filter navigation based on permissions
+  // Filter navigation based on permissions (hide 'closed' modules)
   const filteredNavigation = navigation.filter(item => {
     const moduleId = routeToModule[item.href];
-    return !moduleId || permissions[moduleId] !== false;
+    return !moduleId || permissions[moduleId] !== 'closed';
   });
 
   return (
