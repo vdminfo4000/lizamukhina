@@ -57,12 +57,14 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
       const { data: employees, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email, phone, position, company_id')
-        .eq('inn', companyData.inn)
-        .neq('company_id', companyId);
+        .eq('inn', companyData.inn);
+      
+      // Filter out employees already in this company (client-side to handle null values correctly)
+      const filteredEmployees = employees?.filter(emp => emp.company_id !== companyId) || [];
 
       if (error) throw error;
 
-      setAvailableEmployees(employees || []);
+      setAvailableEmployees(filteredEmployees);
     } catch (error: any) {
       toast({
         title: "Ошибка",
