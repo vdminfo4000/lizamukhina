@@ -14,6 +14,7 @@ import Exchange from "./pages/Exchange";
 import Insurance from "./pages/Insurance";
 import Account from "./pages/Account";
 import Employees from "./pages/Employees";
+import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -81,6 +82,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <Employees />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Layout>
+                  <Profile />
                 </Layout>
               </ProtectedRoute>
             } />
