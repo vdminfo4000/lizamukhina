@@ -180,6 +180,68 @@ export type Database = {
           },
         ]
       }
+      market_listings: {
+        Row: {
+          company_id: string
+          created_at: string
+          crop: string
+          harvest_year: number | null
+          id: string
+          inquiries: number
+          location: string | null
+          price: number
+          quality: string | null
+          quantity: number
+          status: string
+          unit: string
+          updated_at: string
+          user_id: string
+          views: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          crop: string
+          harvest_year?: number | null
+          id?: string
+          inquiries?: number
+          location?: string | null
+          price: number
+          quality?: string | null
+          quantity: number
+          status?: string
+          unit?: string
+          updated_at?: string
+          user_id: string
+          views?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          crop?: string
+          harvest_year?: number | null
+          id?: string
+          inquiries?: number
+          location?: string | null
+          price?: number
+          quality?: string | null
+          quantity?: number
+          status?: string
+          unit?: string
+          updated_at?: string
+          user_id?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_listings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
