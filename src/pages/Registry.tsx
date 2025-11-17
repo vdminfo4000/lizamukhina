@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AddPlotDialog } from "@/components/forms/AddPlotDialog";
 import { AddEquipmentDialog } from "@/components/forms/AddEquipmentDialog";
 import { AddFacilityDialog } from "@/components/forms/AddFacilityDialog";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 
 interface Plot {
   id: string;
@@ -49,10 +51,23 @@ export default function Registry() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { canView, canEdit, loading: accessLoading } = useModuleAccess('registry');
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!accessLoading && !canView) {
+      toast({
+        title: 'Доступ запрещен',
+        description: 'У вас нет доступа к модулю Реестр',
+        variant: 'destructive',
+      });
+      navigate('/');
+    }
+  }, [accessLoading, canView, navigate, toast]);
 
   const loadData = async () => {
     setLoading(true);
@@ -251,7 +266,7 @@ export default function Registry() {
                   <CardTitle>Земельные участки</CardTitle>
                   <CardDescription>Список участков компании</CardDescription>
                 </div>
-                {companyId && (
+                {companyId && canEdit && (
                   <AddPlotDialog companyId={companyId} onSuccess={loadData} />
                 )}
               </div>
@@ -270,7 +285,7 @@ export default function Registry() {
                       <TableHead>Культура</TableHead>
                       <TableHead>Адрес</TableHead>
                       <TableHead>Статус</TableHead>
-                      <TableHead className="text-right">Действия</TableHead>
+                      {canEdit && <TableHead className="text-right">Действия</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -285,15 +300,17 @@ export default function Registry() {
                             {plot.status === 'active' ? 'Активен' : 'Неактивен'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deletePlot(plot.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                        {canEdit && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deletePlot(plot.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -311,7 +328,7 @@ export default function Registry() {
                   <CardTitle>Сельхозтехника</CardTitle>
                   <CardDescription>Список техники компании</CardDescription>
                 </div>
-                {companyId && <AddEquipmentDialog companyId={companyId} onSuccess={loadData} />}
+                {companyId && canEdit && <AddEquipmentDialog companyId={companyId} onSuccess={loadData} />}
               </div>
             </CardHeader>
             <CardContent>
@@ -328,7 +345,7 @@ export default function Registry() {
                       <TableHead>Модель</TableHead>
                       <TableHead>Год</TableHead>
                       <TableHead>Статус</TableHead>
-                      <TableHead></TableHead>
+                      {canEdit && <TableHead></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -343,16 +360,18 @@ export default function Registry() {
                             {item.status === 'active' ? 'Активен' : item.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteEquipment(item.id)}
-                            title="Удалить"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                        {canEdit && (
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteEquipment(item.id)}
+                              title="Удалить"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -370,7 +389,7 @@ export default function Registry() {
                   <CardTitle>Объекты и сооружения</CardTitle>
                   <CardDescription>Склады, ангары и другие объекты</CardDescription>
                 </div>
-                {companyId && <AddFacilityDialog companyId={companyId} onSuccess={loadData} />}
+                {companyId && canEdit && <AddFacilityDialog companyId={companyId} onSuccess={loadData} />}
               </div>
             </CardHeader>
             <CardContent>
@@ -387,7 +406,7 @@ export default function Registry() {
                       <TableHead>Вместимость</TableHead>
                       <TableHead>Адрес</TableHead>
                       <TableHead>Статус</TableHead>
-                      <TableHead></TableHead>
+                      {canEdit && <TableHead></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -402,16 +421,18 @@ export default function Registry() {
                             {facility.status === 'active' ? 'Активен' : facility.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteFacility(facility.id)}
-                            title="Удалить"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                        {canEdit && (
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteFacility(facility.id)}
+                              title="Удалить"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

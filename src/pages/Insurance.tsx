@@ -4,6 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Shield, FileText, CheckCircle, Clock, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
+import { useEffect } from "react";
 
 const insuranceProducts = [
   {
@@ -47,6 +51,20 @@ const applications = [
 ];
 
 export default function Insurance() {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { canView, canEdit, loading: accessLoading } = useModuleAccess('insurance');
+
+  useEffect(() => {
+    if (!accessLoading && !canView) {
+      toast({
+        title: 'Доступ запрещен',
+        description: 'У вас нет доступа к модулю Страхование',
+        variant: 'destructive',
+      });
+      navigate('/');
+    }
+  }, [accessLoading, canView, navigate, toast]);
   return (
     <div className="space-y-6">
       <div>
@@ -135,10 +153,12 @@ export default function Insurance() {
                     <span className="text-muted-foreground">Премия:</span>
                     <span className="font-medium text-foreground">{product.premium}</span>
                   </div>
-                  <Button className="w-full gap-2">
-                    <Plus className="h-4 w-4" />
-                    Оформить заявку
-                  </Button>
+                  {canEdit && (
+                    <Button className="w-full gap-2">
+                      <Plus className="h-4 w-4" />
+                      Оформить заявку
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
