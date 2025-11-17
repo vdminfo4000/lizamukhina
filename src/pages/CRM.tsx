@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Mail, FileText, Users, Send, Upload, BarChart3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
+import { Send, Mail, Users, FileText, Upload, Trash2, User, MessageSquare } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -451,48 +451,90 @@ export default function CRM() {
         <TabsContent value="chat">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Сообщения</CardTitle>
-                <CardDescription>Чат с сотрудниками компании</CardDescription>
+              <CardHeader className="border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Сообщения</CardTitle>
+                    <CardDescription>Чат с сотрудниками компании</CardDescription>
+                  </div>
+                  {selectedReceiver !== "all" && (
+                    <Badge variant="outline">
+                      Личный чат: {employees.find(e => e.id === selectedReceiver)?.first_name}
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px] pr-4 mb-4">
-                  <div className="space-y-4">
+              <CardContent className="p-0">
+                <ScrollArea className="h-[400px] p-4">
+                  <div className="space-y-3">
                     {messages.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-8">Нет сообщений</p>
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <MessageSquare className="w-12 h-12 text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground text-sm">Нет сообщений</p>
+                        <p className="text-xs text-muted-foreground mt-1">Начните общение с коллегами</p>
+                      </div>
                     ) : (
-                      messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`p-4 rounded-lg ${
-                            msg.sender_id === userId ? "bg-primary/10 ml-8" : "bg-muted mr-8"
-                          }`}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <span className="font-medium text-sm">{msg.sender_name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(msg.created_at), {
-                                addSuffix: true,
-                                locale: ru,
-                              })}
-                            </span>
+                      messages.map((msg) => {
+                        const isOwn = msg.sender_id === userId;
+                        const sender = employees.find(e => e.id === msg.sender_id);
+                        const initials = sender 
+                          ? `${sender.first_name?.charAt(0) || ''}${sender.last_name?.charAt(0) || ''}`
+                          : msg.sender_name?.split(' ').map(n => n.charAt(0)).join('') || '?';
+                        
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                          >
+                            <div className="flex-shrink-0">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                                isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                              }`}>
+                                {initials}
+                              </div>
+                            </div>
+                            <div className={`flex-1 max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+                              <div className={`rounded-2xl px-4 py-2 ${
+                                isOwn 
+                                  ? 'bg-primary text-primary-foreground' 
+                                  : 'bg-muted'
+                              }`}>
+                                {!isOwn && (
+                                  <p className="text-xs font-medium mb-1 opacity-70">{msg.sender_name}</p>
+                                )}
+                                <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                              </div>
+                              <span className="text-xs text-muted-foreground mt-1 px-2">
+                                {formatDistanceToNow(new Date(msg.created_at), {
+                                  addSuffix: true,
+                                  locale: ru,
+                                })}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-sm">{msg.message}</p>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </ScrollArea>
-                <div className="space-y-2">
+                <div className="border-t p-4 space-y-3 bg-background">
                   <Select value={selectedReceiver} onValueChange={setSelectedReceiver}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-muted/50">
                       <SelectValue placeholder="Всем (общий чат)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Всем (общий чат)</SelectItem>
+                      <SelectItem value="all">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          Всем (общий чат)
+                        </div>
+                      </SelectItem>
                       {employees.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
-                          {emp.first_name} {emp.last_name}
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            {emp.first_name} {emp.last_name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -502,9 +544,23 @@ export default function CRM() {
                       placeholder="Введите сообщение..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          if (newMessage.trim()) {
+                            handleSendMessage();
+                          }
+                        }
+                      }}
                       rows={2}
+                      className="resize-none"
                     />
-                    <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                    <Button 
+                      onClick={handleSendMessage} 
+                      disabled={!newMessage.trim()}
+                      size="icon"
+                      className="h-auto"
+                    >
                       <Send className="w-4 h-4" />
                     </Button>
                   </div>
@@ -513,20 +569,44 @@ export default function CRM() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Сотрудники</CardTitle>
+              <CardHeader className="border-b">
+                <CardTitle className="text-base">Сотрудники</CardTitle>
                 <CardDescription>Список сотрудников компании</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <ScrollArea className="h-[500px]">
-                  <div className="space-y-2">
-                    {employees.map((emp) => (
-                      <div key={emp.id} className="p-3 border rounded-lg hover:bg-accent cursor-pointer">
-                        <p className="font-medium">
-                          {emp.first_name} {emp.last_name}
-                        </p>
+                  <div className="p-2">
+                    {employees.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-muted-foreground">Нет сотрудников</p>
                       </div>
-                    ))}
+                    ) : (
+                      employees.map((emp) => {
+                        const initials = `${emp.first_name?.charAt(0) || ''}${emp.last_name?.charAt(0) || ''}`;
+                        const isSelected = selectedReceiver === emp.id;
+                        
+                        return (
+                          <div 
+                            key={emp.id} 
+                            className={`p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors mb-1 ${
+                              isSelected ? 'bg-accent' : ''
+                            }`}
+                            onClick={() => setSelectedReceiver(emp.id)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                                {initials}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">
+                                  {emp.first_name} {emp.last_name}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>
