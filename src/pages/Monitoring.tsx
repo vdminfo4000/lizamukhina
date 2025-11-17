@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 
 interface Plot {
   id: string;
@@ -53,10 +55,23 @@ export default function Monitoring() {
   const [plots, setPlots] = useState<Plot[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { canView, canEdit, loading: accessLoading } = useModuleAccess('monitoring');
 
   useEffect(() => {
     loadPlots();
   }, []);
+
+  useEffect(() => {
+    if (!accessLoading && !canView) {
+      toast({
+        title: 'Доступ запрещен',
+        description: 'У вас нет доступа к модулю Мониторинг',
+        variant: 'destructive',
+      });
+      navigate('/');
+    }
+  }, [accessLoading, canView, navigate, toast]);
 
   const loadPlots = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -211,27 +226,29 @@ export default function Monitoring() {
                     <CardTitle>{data.plot}</CardTitle>
                     <CardDescription>Площадь: {data.area} га</CardDescription>
                   </div>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Настроить
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Настройки датчиков</DialogTitle>
-                        <DialogDescription>
-                          Управление датчиками для {data.plot}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <p className="text-sm text-muted-foreground">
-                          Настройка датчиков будет доступна после подключения оборудования
-                        </p>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  {canEdit && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Настроить
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Настройки датчиков</DialogTitle>
+                          <DialogDescription>
+                            Управление датчиками для {data.plot}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <p className="text-sm text-muted-foreground">
+                            Настройка датчиков будет доступна после подключения оборудования
+                          </p>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>

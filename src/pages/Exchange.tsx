@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, TrendingUp, TrendingDown, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
+import { useEffect } from "react";
 
 const marketPrices = [
   { crop: "Пшеница", price: "18,500₽", change: "+2.3%", trend: "up", volume: "2,450 т" },
@@ -60,6 +64,20 @@ const myListings = [
 
 export default function Exchange() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { canView, canEdit, loading: accessLoading } = useModuleAccess('exchange');
+
+  useEffect(() => {
+    if (!accessLoading && !canView) {
+      toast({
+        title: 'Доступ запрещен',
+        description: 'У вас нет доступа к модулю Биржа',
+        variant: 'destructive',
+      });
+      navigate('/');
+    }
+  }, [accessLoading, canView, navigate, toast]);
 
   return (
     <div className="space-y-6">
@@ -211,10 +229,12 @@ export default function Exchange() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Разместить объявление
-                  </Button>
+                  {canEdit && (
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Разместить объявление
+                    </Button>
+                  )}
                   <Button variant="outline">Предварительный просмотр</Button>
                 </div>
               </div>
@@ -230,10 +250,12 @@ export default function Exchange() {
                   <CardTitle>Мои объявления</CardTitle>
                   <CardDescription>Управление вашими предложениями</CardDescription>
                 </div>
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Добавить
-                </Button>
+                {canEdit && (
+                  <Button size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Добавить
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>

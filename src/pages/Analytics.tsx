@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, TrendingUp, BarChart3, PieChart, AlertCircle, CheckCircle2, Clock } from "lucide-react";
@@ -8,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
+import { useEffect } from "react";
 
 interface Plot {
   id: string;
@@ -22,10 +25,23 @@ export default function Analytics() {
   const [plots, setPlots] = useState<Plot[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { canView, loading: accessLoading } = useModuleAccess('analytics');
 
   useEffect(() => {
     loadPlots();
   }, []);
+
+  useEffect(() => {
+    if (!accessLoading && !canView) {
+      toast({
+        title: 'Доступ запрещен',
+        description: 'У вас нет доступа к модулю Аналитика',
+        variant: 'destructive',
+      });
+      navigate('/');
+    }
+  }, [accessLoading, canView, navigate, toast]);
 
   const loadPlots = async () => {
     const { data: { user } } = await supabase.auth.getUser();
