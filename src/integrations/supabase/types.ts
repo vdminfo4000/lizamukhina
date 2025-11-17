@@ -182,6 +182,7 @@ export type Database = {
       }
       market_listings: {
         Row: {
+          additional_info: string | null
           company_id: string
           created_at: string
           crop: string
@@ -199,6 +200,7 @@ export type Database = {
           views: number
         }
         Insert: {
+          additional_info?: string | null
           company_id: string
           created_at?: string
           crop: string
@@ -216,6 +218,7 @@ export type Database = {
           views?: number
         }
         Update: {
+          additional_info?: string | null
           company_id?: string
           created_at?: string
           crop?: string
@@ -238,6 +241,101 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitoring_sensors: {
+        Row: {
+          battery_level: number | null
+          calibration_date: string | null
+          created_at: string
+          id: string
+          last_reading: Json | null
+          name: string
+          sensor_type: string
+          serial_number: string | null
+          status: string | null
+          updated_at: string
+          zone_id: string
+        }
+        Insert: {
+          battery_level?: number | null
+          calibration_date?: string | null
+          created_at?: string
+          id?: string
+          last_reading?: Json | null
+          name: string
+          sensor_type: string
+          serial_number?: string | null
+          status?: string | null
+          updated_at?: string
+          zone_id: string
+        }
+        Update: {
+          battery_level?: number | null
+          calibration_date?: string | null
+          created_at?: string
+          id?: string
+          last_reading?: Json | null
+          name?: string
+          sensor_type?: string
+          serial_number?: string | null
+          status?: string | null
+          updated_at?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_sensors_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitoring_zones: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          plot_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          plot_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          plot_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_zones_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monitoring_zones_plot_id_fkey"
+            columns: ["plot_id"]
+            isOneToOne: false
+            referencedRelation: "plots"
             referencedColumns: ["id"]
           },
         ]
