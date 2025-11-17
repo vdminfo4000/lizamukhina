@@ -10,6 +10,7 @@ import { UserPlus, Search, UserMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PermissionsDialog } from "@/components/forms/PermissionsDialog";
+import { AddEmployeeDialog } from "@/components/forms/AddEmployeeDialog";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -288,13 +289,20 @@ export default function Employees() {
             Добавляйте сотрудников и управляйте их правами доступа
           </p>
         </div>
-        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-          <PopoverTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Добавить сотрудника
-            </Button>
-          </PopoverTrigger>
+        <div className="flex gap-2">
+          {companyId && (
+            <AddEmployeeDialog 
+              companyId={companyId} 
+              onSuccess={loadData} 
+            />
+          )}
+          <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Из существующих
+              </Button>
+            </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0" align="end">
             <Command>
               <CommandInput placeholder="Поиск сотрудника..." />
@@ -316,8 +324,9 @@ export default function Employees() {
                 ))}
               </CommandGroup>
             </Command>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       <Card>
