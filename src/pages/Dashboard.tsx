@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Database, LineChart, Activity, ShoppingCart, Shield, TrendingUp, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const modules = [
   {
@@ -46,14 +49,88 @@ const modules = [
   },
 ];
 
-const stats = [
-  { label: "Активных участков", value: "3", unit: "участка", trend: "+0%" },
-  { label: "Общая площадь", value: "30", unit: "Га", trend: "+0%" },
-  { label: "Активных сделок", value: "0", unit: "сделок", trend: "+0%" },
-  { label: "Датчиков онлайн", value: "12", unit: "устройств", trend: "+2" },
-];
+interface DashboardStats {
+  activePlots: number;
+  totalArea: number;
+  activeDeals: number;
+  onlineSensors: number;
+}
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    activePlots: 0,
+    totalArea: 0,
+    activeDeals: 0,
+    onlineSensors: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, [user]);
+
+  const loadStats = async () => {
+    if (!user) return;
+
+    try {
+      // Get active plots count and total area
+      const { data: plotsData } = await supabase
+        .from('plots')
+        .select('area, status')
+        .eq('status', 'active');
+
+      const activePlots = plotsData?.length || 0;
+      const totalArea = plotsData?.reduce((sum, plot) => sum + Number(plot.area), 0) || 0;
+
+      // Get active deals count (assuming deals are stored in a table, adjust if needed)
+      // For now, using a placeholder value of 0
+      const activeDeals = 0;
+
+      // Get online sensors count (assuming there's a sensors table or monitoring data)
+      // For now, using a placeholder value of 12
+      const onlineSensors = 12;
+
+      setStats({
+        activePlots,
+        totalArea: Math.round(totalArea * 10) / 10, // Round to 1 decimal
+        activeDeals,
+        onlineSensors,
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statsCards = [
+    { 
+      label: "Активных участков", 
+      value: loading ? "..." : stats.activePlots.toString(), 
+      unit: "участка", 
+      trend: "+0%" 
+    },
+    { 
+      label: "Общая площадь", 
+      value: loading ? "..." : stats.totalArea.toString(), 
+      unit: "Га", 
+      trend: "+0%" 
+    },
+    { 
+      label: "Активных сделок", 
+      value: loading ? "..." : stats.activeDeals.toString(), 
+      unit: "сделок", 
+      trend: "+0%" 
+    },
+    { 
+      label: "Датчиков онлайн", 
+      value: loading ? "..." : stats.onlineSensors.toString(), 
+      unit: "устройств", 
+      trend: "+2" 
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -83,7 +160,7 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {statsCards.map((stat) => (
           <Card key={stat.label} className="shadow-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">

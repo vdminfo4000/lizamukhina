@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AuditLogsDialog } from "./AuditLogsDialog";
 
 interface PermissionsDialogProps {
   userId: string;
@@ -33,6 +36,7 @@ export function PermissionsDialog({ userId, userName, userRole, open, onOpenChan
   const [loading, setLoading] = useState(false);
   const [permissions, setPermissions] = useState<Record<string, string>>({});
   const [currentRole, setCurrentRole] = useState(userRole);
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -122,65 +126,86 @@ export function PermissionsDialog({ userId, userName, userRole, open, onOpenChan
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Разрешения доступа</DialogTitle>
-          <DialogDescription>
-            Управление доступом к модулям для {userName}
-          </DialogDescription>
-        </DialogHeader>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Role Selection */}
-            <div className="space-y-2">
-              <Label>Роль</Label>
-              <Select value={currentRole} onValueChange={handleRoleChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Администратор</SelectItem>
-                  <SelectItem value="user">Пользователь</SelectItem>
-                </SelectContent>
-              </Select>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>Разрешения доступа</DialogTitle>
+                <DialogDescription>
+                  Управление доступом к модулям для {userName}
+                </DialogDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAuditLogs(true)}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Журнал
+              </Button>
             </div>
+          </DialogHeader>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Role Selection */}
+              <div className="space-y-2">
+                <Label>Роль</Label>
+                <Select value={currentRole} onValueChange={handleRoleChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Администратор</SelectItem>
+                    <SelectItem value="user">Пользователь</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Module Permissions */}
-            <div className="space-y-4">
-              <Label className="text-base font-semibold">Доступ к модулям</Label>
-              <div className="space-y-3">
-                {MODULES.map((module) => (
-                  <div key={module.id} className="flex items-center justify-between">
-                    <Label htmlFor={module.id} className="cursor-pointer flex-1">
-                      {module.name}
-                    </Label>
-                    <Select
-                      value={permissions[module.id] ?? 'edit'}
-                      onValueChange={(value) => handleAccessLevelChange(module.id, value)}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACCESS_LEVELS.map((level) => (
-                          <SelectItem key={level.value} value={level.value}>
-                            {level.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+              {/* Module Permissions */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Доступ к модулям</Label>
+                <div className="space-y-3">
+                  {MODULES.map((module) => (
+                    <div key={module.id} className="flex items-center justify-between">
+                      <Label htmlFor={module.id} className="cursor-pointer flex-1">
+                        {module.name}
+                      </Label>
+                      <Select
+                        value={permissions[module.id] ?? 'edit'}
+                        onValueChange={(value) => handleAccessLevelChange(module.id, value)}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ACCESS_LEVELS.map((level) => (
+                            <SelectItem key={level.value} value={level.value}>
+                              {level.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AuditLogsDialog
+        userId={userId}
+        userName={userName}
+        open={showAuditLogs}
+        onOpenChange={setShowAuditLogs}
+      />
+    </>
   );
 }
