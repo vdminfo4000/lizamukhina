@@ -183,34 +183,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Modules Grid */}
-      <div>
-        <h2 className="mb-4 text-2xl font-bold text-foreground">Модули системы</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {modules.map((module) => {
-            const Icon = module.icon;
-            return (
-              <Link key={module.title} to={module.href}>
-                <Card className="transition-all hover:shadow-elevated hover:scale-[1.02] cursor-pointer shadow-card">
-                  <CardHeader>
-                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${module.bgColor}`}>
-                      <Icon className={`h-6 w-6 ${module.color}`} />
-                    </div>
-                    <CardTitle className="text-foreground">{module.title}</CardTitle>
-                    <CardDescription>{module.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="ghost" size="sm" className="w-full">
-                      Открыть модуль →
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Recent Activity */}
       <Card className="shadow-card">
         <CardHeader>
