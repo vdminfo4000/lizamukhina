@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin, Trash2 } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AddPlotDialog } from "@/components/forms/AddPlotDialog";
+import { useNavigate } from "react-router-dom";
 
 interface Company {
   id: string;
@@ -23,26 +22,14 @@ interface Company {
   address: string | null;
 }
 
-interface Plot {
-  id: string;
-  cadastral_number: string;
-  area: number;
-  crop: string | null;
-  address: string | null;
-  location_lat: number | null;
-  location_lng: number | null;
-  status: string;
-}
-
 export default function Account() {
   const [company, setCompany] = useState<Company | null>(null);
-  const [plots, setPlots] = useState<Plot[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Editable company fields
   const [editedCompany, setEditedCompany] = useState<Company | null>(null);
 
   useEffect(() => {
@@ -58,7 +45,6 @@ export default function Account() {
       return;
     }
 
-    // Get company_id from profile
     const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
@@ -72,7 +58,6 @@ export default function Account() {
 
     setCompanyId(profile.company_id);
 
-    // Load company data
     const { data: companyData } = await supabase
       .from('companies')
       .select('*')
@@ -83,15 +68,6 @@ export default function Account() {
       setCompany(companyData);
       setEditedCompany(companyData);
     }
-
-    // Load plots
-    const { data: plotsData } = await supabase
-      .from('plots')
-      .select('*')
-      .eq('company_id', profile.company_id)
-      .order('created_at', { ascending: false });
-
-    if (plotsData) setPlots(plotsData);
 
     setLoading(false);
   };
@@ -132,21 +108,6 @@ export default function Account() {
     setSaving(false);
   };
 
-  const deletePlot = async (id: string) => {
-    const { error } = await supabase.from('plots').delete().eq('id', id);
-
-    if (error) {
-      toast({
-        title: 'Ошибка',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({ title: 'Успешно', description: 'Участок удален' });
-      loadData();
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -166,50 +127,46 @@ export default function Account() {
     );
   }
 
-  const totalArea = plots.reduce((sum, plot) => sum + Number(plot.area), 0);
-
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto py-8 space-y-6">
       <div>
-        <h1 className="mb-2 text-3xl font-bold text-foreground">Аккаунт компании</h1>
+        <h1 className="mb-2 text-3xl font-bold">Аккаунт компании</h1>
         <p className="text-muted-foreground">
-          Управление профилем организации и земельными участками
+          Управление профилем организации
         </p>
       </div>
 
-      {/* Company Header */}
-      <Card className="shadow-card bg-gradient-primary text-white">
+      <Card className="border-primary/20">
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <Building2 className="h-8 w-8" />
+                <Building2 className="h-8 w-8 text-primary" />
                 <div>
                   <h2 className="text-2xl font-bold">{company.name}</h2>
-                  <p className="text-sm opacity-90">ИНН: {company.inn || 'Не указан'}</p>
+                  <p className="text-sm text-muted-foreground">ИНН: {company.inn || 'Не указан'}</p>
                 </div>
               </div>
-              <div className="mt-4 flex items-center gap-2 text-sm opacity-90">
+              <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />
                 <span>{company.address || 'Адрес не указан'}</span>
               </div>
             </div>
-            <Badge className="bg-white/20 text-white hover:bg-white/30">
+            <Badge variant="secondary">
               Производитель продукции
             </Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* Main Tabs */}
-      <Tabs defaultValue="company" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="company">Реквизиты</TabsTrigger>
-          <TabsTrigger value="plots">Участки ({plots.length})</TabsTrigger>
+      <Tabs defaultValue="company" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="company">Компания</TabsTrigger>
+          <TabsTrigger value="employees" onClick={() => navigate('/employees')}>Сотрудники</TabsTrigger>
         </TabsList>
 
         <TabsContent value="company" className="space-y-4">
-          <Card className="shadow-card">
+          <Card>
             <CardHeader>
               <CardTitle>Информация о компании</CardTitle>
               <CardDescription>Юридические данные организации</CardDescription>
@@ -282,77 +239,12 @@ export default function Account() {
                   />
                 </div>
               </div>
-              <div className="mt-6">
+
+              <div className="mt-6 flex justify-end">
                 <Button onClick={handleSaveCompany} disabled={saving}>
                   {saving ? 'Сохранение...' : 'Сохранить изменения'}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="plots" className="space-y-4">
-          <Card className="shadow-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Земельные участки</CardTitle>
-                  <CardDescription>
-                    Всего участков: {plots.length} • Общая площадь: {totalArea.toFixed(2)} Га
-                  </CardDescription>
-                </div>
-                {companyId && (
-                  <AddPlotDialog companyId={companyId} onSuccess={loadData} />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {plots.length === 0 ? (
-                <div className="text-center py-8">
-                  <MapPin className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Нет данных о земельных участках</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Добавьте первый участок, чтобы начать управление
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Кадастровый номер</TableHead>
-                      <TableHead>Площадь (Га)</TableHead>
-                      <TableHead>Культура</TableHead>
-                      <TableHead>Адрес</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead className="text-right">Действия</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {plots.map((plot) => (
-                      <TableRow key={plot.id}>
-                        <TableCell className="font-medium">{plot.cadastral_number}</TableCell>
-                        <TableCell>{plot.area}</TableCell>
-                        <TableCell>{plot.crop || '-'}</TableCell>
-                        <TableCell>{plot.address || '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant={plot.status === 'active' ? 'default' : 'secondary'}>
-                            {plot.status === 'active' ? 'Активен' : 'Неактивен'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deletePlot(plot.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

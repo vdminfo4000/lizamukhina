@@ -24,6 +24,7 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
     firstName: "",
     lastName: "",
     phone: "",
+    position: "",
     role: "user" as "user" | "admin",
   });
 
@@ -55,6 +56,7 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phone,
+            position: formData.position,
             company_id: companyId,
           })
           .eq('id', authData.user.id);
@@ -82,6 +84,7 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
           firstName: "",
           lastName: "",
           phone: "",
+          position: "",
           role: "user",
         });
         setOpen(false);
@@ -165,6 +168,16 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="position">Должность</Label>
+            <Input
+              id="position"
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+              required
             />
           </div>
 

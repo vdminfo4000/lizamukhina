@@ -234,6 +234,7 @@ export type Database = {
           id: string
           last_name: string | null
           phone: string | null
+          position: string | null
           updated_at: string
         }
         Insert: {
@@ -245,6 +246,7 @@ export type Database = {
           id: string
           last_name?: string | null
           phone?: string | null
+          position?: string | null
           updated_at?: string
         }
         Update: {
@@ -256,6 +258,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          position?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -267,6 +270,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_permissions: {
+        Row: {
+          can_access: boolean
+          created_at: string
+          id: string
+          module: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_access?: boolean
+          created_at?: string
+          id?: string
+          module: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_access?: boolean
+          created_at?: string
+          id?: string
+          module?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

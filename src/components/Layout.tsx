@@ -35,11 +35,24 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { signOut, user } = useAuth();
   const [companyName, setCompanyName] = useState<string>("Загрузка...");
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  // Map navigation routes to module IDs
+  const routeToModule: Record<string, string> = {
+    "/": "dashboard",
+    "/registry": "registry",
+    "/analytics": "analytics",
+    "/monitoring": "monitoring",
+    "/exchange": "exchange",
+    "/insurance": "insurance",
+  };
 
   useEffect(() => {
-    const loadCompanyName = async () => {
+    const loadUserData = async () => {
       if (!user) return;
 
+      // Load company name
       const { data: profile } = await supabase
         .from('profiles')
         .select('company_id')
@@ -57,10 +70,39 @@ export default function Layout({ children }: LayoutProps) {
           setCompanyName(company.name);
         }
       }
+
+      // Load permissions
+      const { data: permissionsData } = await supabase
+        .from('user_permissions')
+        .select('module, can_access')
+        .eq('user_id', user.id);
+
+      const permissionsMap: Record<string, boolean> = {};
+      
+      // Default all modules to true (allowed) for admins and when no permissions set
+      Object.values(routeToModule).forEach(module => {
+        permissionsMap[module] = true;
+      });
+
+      // Override with actual permissions
+      if (permissionsData && permissionsData.length > 0) {
+        permissionsData.forEach(perm => {
+          permissionsMap[perm.module] = perm.can_access;
+        });
+      }
+
+      setPermissions(permissionsMap);
+      setLoading(false);
     };
 
-    loadCompanyName();
+    loadUserData();
   }, [user]);
+
+  // Filter navigation based on permissions
+  const filteredNavigation = navigation.filter(item => {
+    const moduleId = routeToModule[item.href];
+    return !moduleId || permissions[moduleId] !== false;
+  });
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -83,7 +125,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
             return (
@@ -168,7 +210,7 @@ export default function Layout({ children }: LayoutProps) {
         {/* Mobile Navigation */}
         <nav className="lg:hidden border-b border-border bg-card overflow-x-auto">
           <div className="flex items-center gap-2 px-4 py-2">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
               return (
