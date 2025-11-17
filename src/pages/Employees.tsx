@@ -99,32 +99,48 @@ export default function Employees() {
   };
 
   const loadEmployees = async (compId: string) => {
-    // Get all employees in the company with their roles
-    const { data: employeesData } = await supabase
+    // Get all employees in the company
+    const { data: employeesData, error: profilesError } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        position,
-        user_roles (role)
-      `)
+      .select('id, first_name, last_name, email, phone, position')
       .eq('company_id', compId);
 
-    if (employeesData) {
-      const formattedEmployees = employeesData.map(emp => ({
-        id: emp.id,
-        first_name: emp.first_name,
-        last_name: emp.last_name,
-        email: emp.email,
-        phone: emp.phone,
-        position: emp.position,
-        role: (emp.user_roles as any)?.[0]?.role || 'user',
-      }));
-      setEmployees(formattedEmployees);
+    if (profilesError) {
+      console.error('Error loading employees:', profilesError);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить список сотрудников",
+        variant: "destructive",
+      });
+      return;
     }
+
+    if (!employeesData || employeesData.length === 0) {
+      setEmployees([]);
+      return;
+    }
+
+    // Get roles for all employees
+    const employeeIds = employeesData.map(emp => emp.id);
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('user_id, role')
+      .in('user_id', employeeIds);
+
+    // Map roles to employees
+    const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role]) || []);
+    
+    const formattedEmployees = employeesData.map(emp => ({
+      id: emp.id,
+      first_name: emp.first_name,
+      last_name: emp.last_name,
+      email: emp.email,
+      phone: emp.phone,
+      position: emp.position,
+      role: rolesMap.get(emp.id) || 'user',
+    }));
+    
+    setEmployees(formattedEmployees);
   };
 
 
