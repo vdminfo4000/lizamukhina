@@ -20,7 +20,6 @@ const Auth = () => {
   // Sign Up form state
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
   const [inn, setInn] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -54,7 +53,6 @@ const Auth = () => {
     setLoading(true);
 
     const { error } = await signUp(signUpEmail, signUpPassword, {
-      company_name: companyName,
       inn: inn,
       first_name: firstName,
       last_name: lastName,
@@ -157,15 +155,6 @@ const Auth = () => {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Название компании</Label>
-                  <Input
-                    id="company"
-                    placeholder="ООО Агрофирма"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
