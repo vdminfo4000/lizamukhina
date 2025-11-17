@@ -5,11 +5,22 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { UserPlus, Search, UserMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PermissionsDialog } from "@/components/forms/PermissionsDialog";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Employee {
   id: string;
@@ -38,6 +49,8 @@ export default function Employees() {
   const [openCombobox, setOpenCombobox] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [employeeToRemove, setEmployeeToRemove] = useState<Employee | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -227,6 +240,42 @@ export default function Employees() {
     loadData(); // Reload to get updated roles
   };
 
+  const removeEmployeeFromCompany = async () => {
+    if (!employeeToRemove) return;
+
+    // Set the user's company_id to null to remove them from this company
+    const { error } = await supabase
+      .from('profiles')
+      .update({ company_id: null })
+      .eq('id', employeeToRemove.id);
+
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: 'Успешно',
+      description: 'Сотрудник удален из компании',
+    });
+
+    setEmployeeToRemove(null);
+    await loadData();
+  };
+
+  const filteredEmployees = employees.filter(emp => {
+    const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+    const email = emp.email?.toLowerCase() || '';
+    const position = emp.position?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+
+    return fullName.includes(query) || email.includes(query) || position.includes(query);
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -288,6 +337,17 @@ export default function Employees() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Поиск по имени, email или должности..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -296,16 +356,16 @@ export default function Employees() {
                 <TableHead>Телефон</TableHead>
                 <TableHead>Должность</TableHead>
                 <TableHead>Роль</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees.map((employee) => (
-                <TableRow 
-                  key={employee.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleEmployeeClick(employee)}
-                >
-                  <TableCell>
+              {filteredEmployees.map((employee) => (
+                <TableRow key={employee.id}>
+                  <TableCell
+                    className="cursor-pointer hover:underline"
+                    onClick={() => handleEmployeeClick(employee)}
+                  >
                     {employee.first_name} {employee.last_name}
                   </TableCell>
                   <TableCell>{employee.email}</TableCell>
@@ -315,6 +375,18 @@ export default function Employees() {
                     <Badge variant={employee.role === 'admin' ? 'default' : 'secondary'}>
                       {employee.role === 'admin' ? 'Администратор' : 'Пользователь'}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEmployeeToRemove(employee);
+                      }}
+                    >
+                      <UserMinus className="h-4 w-4 text-destructive" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -333,6 +405,24 @@ export default function Employees() {
           onRoleChange={handlePermissionsDialogClose}
         />
       )}
+
+      <AlertDialog open={!!employeeToRemove} onOpenChange={(open) => !open && setEmployeeToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить сотрудника из компании?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Вы уверены, что хотите удалить {employeeToRemove?.first_name} {employeeToRemove?.last_name} из компании?
+              Это действие отвяжет пользователя от компании, но не удалит учетную запись.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction onClick={removeEmployeeFromCompany}>
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
