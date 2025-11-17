@@ -74,7 +74,7 @@ export default function CRM() {
   const { toast } = useToast();
 
   const [newMessage, setNewMessage] = useState("");
-  const [selectedReceiver, setSelectedReceiver] = useState<string>("");
+  const [selectedReceiver, setSelectedReceiver] = useState<string>("all");
   const [newEmailSubject, setNewEmailSubject] = useState("");
   const [newEmailTo, setNewEmailTo] = useState("");
   const [newEmailBody, setNewEmailBody] = useState("");
@@ -318,7 +318,7 @@ export default function CRM() {
       company_id: companyId,
       sender_id: userId,
       sender_name: userName,
-      receiver_id: selectedReceiver || null,
+      receiver_id: selectedReceiver === "all" ? null : selectedReceiver,
       message: newMessage,
     });
 
@@ -489,7 +489,7 @@ export default function CRM() {
                       <SelectValue placeholder="Всем (общий чат)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Всем (общий чат)</SelectItem>
+                      <SelectItem value="all">Всем (общий чат)</SelectItem>
                       {employees.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
                           {emp.first_name} {emp.last_name}
