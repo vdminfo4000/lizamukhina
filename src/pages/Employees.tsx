@@ -149,10 +149,18 @@ export default function Employees() {
     setPermissionsDialogOpen(true);
   };
 
-  const handlePermissionsDialogClose = () => {
+  const handlePermissionsDialogClose = async () => {
     setPermissionsDialogOpen(false);
     setSelectedEmployee(null);
-    loadData(); // Reload to get updated roles
+    if (companyId) {
+      await loadEmployees(companyId);
+    }
+  };
+
+  const handleEmployeeAdded = async () => {
+    if (companyId) {
+      await loadEmployees(companyId);
+    }
   };
 
   const removeEmployeeFromCompany = async () => {
@@ -179,7 +187,9 @@ export default function Employees() {
     });
 
     setEmployeeToRemove(null);
-    await loadData();
+    if (companyId) {
+      await loadEmployees(companyId);
+    }
   };
 
   const filteredEmployees = employees.filter(emp => {
@@ -215,7 +225,7 @@ export default function Employees() {
         {companyId && (
           <AddEmployeeDialog 
             companyId={companyId} 
-            onSuccess={loadData} 
+            onSuccess={handleEmployeeAdded} 
           />
         )}
       </div>
