@@ -91,8 +91,11 @@ export function AddEmployeeDialog({ companyId, onSuccess }: AddEmployeeDialogPro
         description: "Сотрудник добавлен в компанию",
       });
 
+      // First call onSuccess to update the parent list
+      await onSuccess();
+      
+      // Then close the dialog and reload available employees
       setOpen(false);
-      onSuccess();
     } catch (error: any) {
       toast({
         title: "Ошибка",
