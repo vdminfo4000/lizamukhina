@@ -3,10 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Search, UserMinus } from "lucide-react";
+import { Search, UserMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PermissionsDialog } from "@/components/forms/PermissionsDialog";
@@ -33,21 +31,11 @@ interface Employee {
   role: string;
 }
 
-interface AvailableUser {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-}
-
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
-  const [companyInn, setCompanyInn] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [openCombobox, setOpenCombobox] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,7 +81,7 @@ export default function Employees() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get company_id and INN
+    // Get company_id
     const { data: profile } = await supabase
       .from('profiles')
       .select('company_id')
@@ -105,25 +93,8 @@ export default function Employees() {
       return;
     }
 
-    const { data: company } = await supabase
-      .from('companies')
-      .select('id, inn')
-      .eq('id', profile.company_id)
-      .single();
-
-    if (!company) {
-      setLoading(false);
-      return;
-    }
-
-    setCompanyId(company.id);
-    setCompanyInn(company.inn);
-
-    await Promise.all([
-      loadEmployees(company.id),
-      loadAvailableUsers(company.inn, company.id)
-    ]);
-
+    setCompanyId(profile.company_id);
+    await loadEmployees(profile.company_id);
     setLoading(false);
   };
 
@@ -156,70 +127,6 @@ export default function Employees() {
     }
   };
 
-  const loadAvailableUsers = async (inn: string | null, currentCompanyId: string) => {
-    if (!inn) return;
-
-    // Get all users registered with this INN who are not in this company
-    // RLS policy ensures admins can see all profiles with their company's INN
-    const { data: allProfiles } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, email, company_id, inn')
-      .eq('inn', inn);
-
-    if (allProfiles) {
-      // Filter out users who are already in the current company
-      const available = allProfiles
-        .filter(p => p.company_id !== currentCompanyId)
-        .map(p => ({
-          id: p.id,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          email: p.email,
-        }));
-      
-      setAvailableUsers(available);
-    }
-  };
-
-  const addEmployeeToCompany = async (userId: string) => {
-    if (!companyId) return;
-
-    // Update the user's company_id to add them to this company
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ company_id: companyId })
-      .eq('id', userId);
-
-    if (profileError) {
-      toast({
-        title: 'Ошибка',
-        description: profileError.message,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Check if user has a role, if not create one
-    const { data: existingRole } = await supabase
-      .from('user_roles')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (!existingRole) {
-      await supabase
-        .from('user_roles')
-        .insert({ user_id: userId, role: 'user' });
-    }
-
-    toast({
-      title: 'Успешно',
-      description: 'Сотрудник добавлен в компанию',
-    });
-
-    setOpenCombobox(false);
-    await loadData();
-  };
 
   const handleEmployeeClick = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -289,44 +196,12 @@ export default function Employees() {
             Добавляйте сотрудников и управляйте их правами доступа
           </p>
         </div>
-        <div className="flex gap-2">
-          {companyId && (
-            <AddEmployeeDialog 
-              companyId={companyId} 
-              onSuccess={loadData} 
-            />
-          )}
-          <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Из существующих
-              </Button>
-            </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0" align="end">
-            <Command>
-              <CommandInput placeholder="Поиск сотрудника..." />
-              <CommandEmpty>Сотрудники не найдены</CommandEmpty>
-              <CommandGroup>
-                {availableUsers.map((user) => (
-                  <CommandItem
-                    key={user.id}
-                    value={`${user.first_name} ${user.last_name}`}
-                    onSelect={() => addEmployeeToCompany(user.id)}
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">
-                        {user.first_name} {user.last_name}
-                      </span>
-                      <span className="text-sm text-muted-foreground">{user.email}</span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
+        {companyId && (
+          <AddEmployeeDialog 
+            companyId={companyId} 
+            onSuccess={loadData} 
+          />
+        )}
       </div>
 
       <Card>
