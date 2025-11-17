@@ -96,6 +96,13 @@ export default function Monitoring() {
     ni: "",
     cu: ""
   });
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [selectedSensorForSettings, setSelectedSensorForSettings] = useState<string | null>(null);
+  const [sensorApiSettings, setSensorApiSettings] = useState({
+    apiUrl: "",
+    apiKey: "",
+    apiMethod: "GET",
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
   const { canView, canEdit, loading: accessLoading } = useModuleAccess('monitoring');
@@ -300,6 +307,57 @@ export default function Monitoring() {
       description: 'Датчик удален',
     });
 
+    loadZones();
+  };
+
+  const handleOpenSensorSettings = (sensor: Sensor) => {
+    setSelectedSensorForSettings(sensor.id);
+    // Load existing API settings from last_reading if available
+    if (sensor.last_reading && typeof sensor.last_reading === 'object') {
+      const settings = sensor.last_reading as any;
+      setSensorApiSettings({
+        apiUrl: settings.apiUrl || "",
+        apiKey: settings.apiKey || "",
+        apiMethod: settings.apiMethod || "GET",
+      });
+    } else {
+      setSensorApiSettings({
+        apiUrl: "",
+        apiKey: "",
+        apiMethod: "GET",
+      });
+    }
+    setSettingsDialogOpen(true);
+  };
+
+  const handleSaveSensorSettings = async () => {
+    if (!selectedSensorForSettings) return;
+
+    const { error } = await supabase
+      .from('monitoring_sensors')
+      .update({
+        last_reading: {
+          ...sensorApiSettings,
+          value: null, // Will be populated when API is called
+        }
+      })
+      .eq('id', selectedSensorForSettings);
+
+    if (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось сохранить настройки',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: 'Успешно',
+      description: 'Настройки API сохранены',
+    });
+
+    setSettingsDialogOpen(false);
     loadZones();
   };
 
@@ -703,28 +761,51 @@ export default function Monitoring() {
                                     return (
                                       <div key={zone.id}>
                                         <p className="text-sm font-medium mb-2">{zone.name}</p>
-                                        {zoneSensors.map((sensor) => (
-                                          <Card key={sensor.id} className="mb-2">
-                                            <CardContent className="p-3">
-                                              <div className="flex items-center justify-between">
-                                                <div>
-                                                  <p className="font-medium">{sensor.name}</p>
-                                                  <p className="text-sm text-muted-foreground">
-                                                    {sensor.sensor_type} • {sensor.serial_number || 'Без номера'}
-                                                    {sensor.battery_level && ` • Батарея: ${sensor.battery_level}%`}
-                                                  </p>
+                                        {zoneSensors.map((sensor) => {
+                                          const sensorReading = sensor.last_reading && typeof sensor.last_reading === 'object' 
+                                            ? (sensor.last_reading as any).value 
+                                            : null;
+                                          
+                                          return (
+                                            <Card key={sensor.id} className="mb-2">
+                                              <CardContent className="p-3">
+                                                <div className="flex items-center gap-3">
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleOpenSensorSettings(sensor)}
+                                                  >
+                                                    <Settings className="h-4 w-4" />
+                                                  </Button>
+                                                  <div className="flex-1">
+                                                    <div className="flex items-center gap-3">
+                                                      <div className="flex-1">
+                                                        <p className="font-medium">{sensor.name}</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                          {sensor.sensor_type} • {sensor.serial_number || 'Без номера'}
+                                                          {sensor.battery_level && ` • Батарея: ${sensor.battery_level}%`}
+                                                        </p>
+                                                      </div>
+                                                      <div className="min-w-[120px] text-right">
+                                                        <p className="text-sm text-muted-foreground">Показания:</p>
+                                                        <p className="text-lg font-semibold">
+                                                          {sensorReading || '—'}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDeleteSensor(sensor.id)}
+                                                  >
+                                                    <Trash2 className="h-4 w-4" />
+                                                  </Button>
                                                 </div>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() => handleDeleteSensor(sensor.id)}
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                              </div>
-                                            </CardContent>
-                                          </Card>
-                                        ))}
+                                              </CardContent>
+                                            </Card>
+                                          );
+                                        })}
                                       </div>
                                     );
                                   })}
@@ -906,6 +987,57 @@ export default function Monitoring() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Sensor API Settings Dialog */}
+      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Настройки подключения API датчика</DialogTitle>
+            <DialogDescription>
+              Настройте параметры для получения данных с датчика через API
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="apiUrl">API URL</Label>
+              <Input
+                id="apiUrl"
+                placeholder="https://api.example.com/sensor/data"
+                value={sensorApiSettings.apiUrl}
+                onChange={(e) => setSensorApiSettings({ ...sensorApiSettings, apiUrl: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">API Key</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="Введите API ключ"
+                value={sensorApiSettings.apiKey}
+                onChange={(e) => setSensorApiSettings({ ...sensorApiSettings, apiKey: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="apiMethod">HTTP метод</Label>
+              <Select
+                value={sensorApiSettings.apiMethod}
+                onValueChange={(value) => setSensorApiSettings({ ...sensorApiSettings, apiMethod: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GET">GET</SelectItem>
+                  <SelectItem value="POST">POST</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSaveSensorSettings} className="w-full">
+              Сохранить настройки
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
