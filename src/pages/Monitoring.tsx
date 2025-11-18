@@ -485,8 +485,8 @@ export default function Monitoring() {
       <Tabs defaultValue="sensors" className="space-y-4">
         {/* Виджеты погоды для каждого участка */}
         {plots.length > 0 && (
-          <div className="mb-6 overflow-x-auto">
-            <div className="flex gap-4 pb-4">
+          <div className="mb-6 w-full overflow-x-auto">
+            <div className="flex flex-nowrap gap-4 pb-4 min-w-0">
               {plots.map((plot) => (
                 <div key={plot.id} className="flex-shrink-0 w-[280px]">
                   <PlotWeatherWidget
@@ -860,7 +860,7 @@ export default function Monitoring() {
                     ).map(([zoneName, zoneSensors]: [string, any]) => (
                       <div key={zoneName} className="space-y-2">
                         <h4 className="text-sm font-semibold text-muted-foreground">{zoneName}</h4>
-                        <div className="flex gap-2 overflow-x-auto pb-2">
+                        <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 w-full min-w-0">
                           {zoneSensors.map((sensor: any) => {
                             const hasData = sensor.last_reading && typeof sensor.last_reading === 'object' && 'value' in sensor.last_reading;
                             const sensorValue = hasData ? sensor.last_reading.value : null;
