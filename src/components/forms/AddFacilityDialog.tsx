@@ -47,6 +47,8 @@ export function AddFacilityDialog({ companyId, onSuccess }: AddFacilityDialogPro
       type: formData.type,
       capacity: formData.capacity,
       address: formData.address,
+      location_lat: formData.location_lat ? parseFloat(formData.location_lat) : null,
+      location_lng: formData.location_lng ? parseFloat(formData.location_lng) : null,
     });
 
     if (error) {
@@ -125,24 +127,48 @@ export function AddFacilityDialog({ companyId, onSuccess }: AddFacilityDialogPro
 
           <div className="space-y-2">
             <Label htmlFor="address">Адрес</Label>
-            <div className="flex gap-2">
+            <Input
+              id="address"
+              placeholder="ул. Центральная, д. 1"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="location_lat">Широта</Label>
               <Input
-                id="address"
-                placeholder="ул. Центральная, д. 1"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="flex-1"
+                id="location_lat"
+                type="number"
+                step="any"
+                placeholder="55.7558"
+                value={formData.location_lat}
+                onChange={(e) => setFormData({ ...formData, location_lat: e.target.value })}
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowMapDialog(true)}
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Карта
-              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location_lng">Долгота</Label>
+              <Input
+                id="location_lng"
+                type="number"
+                step="any"
+                placeholder="37.6173"
+                value={formData.location_lng}
+                onChange={(e) => setFormData({ ...formData, location_lng: e.target.value })}
+              />
             </div>
           </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowMapDialog(true)}
+            className="w-full"
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Выбрать на карте
+          </Button>
 
           <YandexMapDialog
             open={showMapDialog}

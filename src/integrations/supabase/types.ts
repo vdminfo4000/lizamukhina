@@ -338,6 +338,8 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          location_lat: number | null
+          location_lng: number | null
           name: string
           status: string | null
           type: string
@@ -349,6 +351,8 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
           name: string
           status?: string | null
           type: string
@@ -360,6 +364,8 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          location_lat?: number | null
+          location_lng?: number | null
           name?: string
           status?: string | null
           type?: string
