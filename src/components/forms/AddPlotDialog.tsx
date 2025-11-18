@@ -68,11 +68,12 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
     setLoading(false);
   };
 
-  const handleCoordinatesSelect = (lat: number, lng: number) => {
+  const handleCoordinatesSelect = (lat: number, lng: number, address?: string) => {
     setFormData({
       ...formData,
       location_lat: lat.toFixed(6),
-      location_lng: lng.toFixed(6)
+      location_lng: lng.toFixed(6),
+      address: address || formData.address
     });
   };
 
