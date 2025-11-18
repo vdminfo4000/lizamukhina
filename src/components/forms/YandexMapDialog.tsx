@@ -30,11 +30,19 @@ export function YandexMapDialog({
   const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // Очистка при закрытии диалога
+      if (map) {
+        map.destroy();
+        setMap(null);
+        setPlacemark(null);
+      }
+      return;
+    }
 
     const loadYandexMaps = () => {
       if (window.ymaps) {
-        initMap();
+        window.ymaps.ready(initMap);
         return;
       }
 
@@ -48,50 +56,55 @@ export function YandexMapDialog({
     };
 
     const initMap = () => {
-      if (!mapContainer.current || map) return;
+      if (!mapContainer.current) return;
+
+      // Очистка предыдущей карты если она есть
+      if (map) {
+        map.destroy();
+      }
 
       const lat = parseFloat(initialLat) || 55.751244;
       const lng = parseFloat(initialLng) || 37.618423;
 
-      const newMap = new window.ymaps.Map(mapContainer.current, {
-        center: [lat, lng],
-        zoom: 10,
-        controls: ['zoomControl', 'searchControl', 'typeSelector', 'fullscreenControl']
-      });
+      // Небольшая задержка для правильного рендеринга контейнера
+      setTimeout(() => {
+        if (!mapContainer.current) return;
 
-      const newPlacemark = new window.ymaps.Placemark([lat, lng], {}, {
-        preset: 'islands#redDotIcon',
-        draggable: true
-      });
+        const newMap = new window.ymaps.Map(mapContainer.current, {
+          center: [lat, lng],
+          zoom: 10,
+          controls: ['zoomControl', 'searchControl', 'typeSelector', 'fullscreenControl']
+        });
 
-      newMap.geoObjects.add(newPlacemark);
+        const newPlacemark = new window.ymaps.Placemark([lat, lng], {}, {
+          preset: 'islands#redDotIcon',
+          draggable: true
+        });
 
-      newPlacemark.events.add('dragend', function () {
-        const coords = newPlacemark.geometry.getCoordinates();
-        setSelectedCoords(coords);
-      });
+        newMap.geoObjects.add(newPlacemark);
 
-      newMap.events.add('click', function (e: any) {
-        const coords = e.get('coords');
-        newPlacemark.geometry.setCoordinates(coords);
-        setSelectedCoords(coords);
-      });
+        newPlacemark.events.add('dragend', function () {
+          const coords = newPlacemark.geometry.getCoordinates();
+          setSelectedCoords(coords);
+        });
 
-      setMap(newMap);
-      setPlacemark(newPlacemark);
-      setSelectedCoords([lat, lng]);
+        newMap.events.add('click', function (e: any) {
+          const coords = e.get('coords');
+          newPlacemark.geometry.setCoordinates(coords);
+          setSelectedCoords(coords);
+        });
+
+        // Подгонка размера карты под контейнер
+        newMap.container.fitToViewport();
+
+        setMap(newMap);
+        setPlacemark(newPlacemark);
+        setSelectedCoords([lat, lng]);
+      }, 100);
     };
 
     loadYandexMaps();
-
-    return () => {
-      if (map) {
-        map.destroy();
-        setMap(null);
-        setPlacemark(null);
-      }
-    };
-  }, [open]);
+  }, [open, initialLat, initialLng]);
 
   const handleConfirm = () => {
     if (selectedCoords) {
