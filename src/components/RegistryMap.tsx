@@ -170,7 +170,7 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
   }, [map, clusterer, plots, facilities, selectedCrop]);
 
   return (
-    <Card className={`transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'mb-6 w-full'}`}>
+    <Card className={`transition-all duration-300 ${isFullscreen ? 'fixed inset-x-0 top-0 z-50 rounded-none h-[70vh]' : 'mb-6 w-full max-w-full'}`}>
       <div className="flex items-center justify-between p-4 border-b flex-wrap gap-2">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -220,7 +220,7 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
       
       <div 
         ref={mapContainer} 
-        className={`w-full ${isFullscreen ? 'h-[calc(100vh-80px)]' : 'h-[25vh]'} min-h-[200px] max-w-full`}
+        className={`w-full ${isFullscreen ? 'h-[calc(70vh-80px)]' : 'h-[25vh]'} min-h-[200px] max-w-full`}
       />
     </Card>
   );
