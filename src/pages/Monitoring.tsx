@@ -23,6 +23,7 @@ import { useWeatherData } from "@/hooks/useWeatherData";
 
 interface Plot {
   id: string;
+  name?: string | null;
   cadastral_number: string;
   area: number;
   crop: string | null;
@@ -481,15 +482,19 @@ export default function Monitoring() {
       <Tabs defaultValue="sensors" className="space-y-4">
         {/* Виджеты погоды для каждого участка */}
         {plots.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-            {plots.map((plot) => (
-              <PlotWeatherWidget
-                key={plot.id}
-                plotName={`${plot.cadastral_number} - ${plot.crop || 'Без культуры'}`}
-                latitude={plot.location_lat}
-                longitude={plot.location_lng}
-              />
-            ))}
+          <div className="mb-6 overflow-x-auto">
+            <div className="flex gap-4 pb-4">
+              {plots.map((plot) => (
+                <div key={plot.id} className="flex-shrink-0 w-[280px]">
+                  <PlotWeatherWidget
+                    plotName={plot.name}
+                    cadastralNumber={plot.cadastral_number}
+                    latitude={plot.location_lat}
+                    longitude={plot.location_lng}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -913,7 +918,7 @@ export default function Monitoring() {
             {plots.map((plot) => (
               <PlotWeatherDetail
                 key={plot.id}
-                plotName={plot.crop || 'Без культуры'}
+                plotName={plot.name}
                 cadastralNumber={plot.cadastral_number}
                 latitude={plot.location_lat}
                 longitude={plot.location_lng}

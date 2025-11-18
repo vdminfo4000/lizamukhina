@@ -3,17 +3,20 @@ import { useWeatherData } from "@/hooks/useWeatherData";
 import { Skeleton } from "./ui/skeleton";
 
 interface PlotWeatherWidgetProps {
-  plotName: string;
+  plotName?: string | null;
+  cadastralNumber?: string;
   latitude: number | null;
   longitude: number | null;
 }
 
-export function PlotWeatherWidget({ plotName, latitude, longitude }: PlotWeatherWidgetProps) {
+export function PlotWeatherWidget({ plotName, cadastralNumber, latitude, longitude }: PlotWeatherWidgetProps) {
   const { weatherData, loading } = useWeatherData(latitude, longitude);
+
+  const displayName = plotName || cadastralNumber || 'Участок';
 
   if (loading || !weatherData) {
     return (
-      <div className="h-[200px] w-full">
+      <div className="h-[200px] w-full min-w-[280px]">
         <Skeleton className="h-full w-full" />
       </div>
     );
@@ -21,7 +24,7 @@ export function PlotWeatherWidget({ plotName, latitude, longitude }: PlotWeather
 
   return (
     <WeatherWidget
-      plotName={plotName}
+      plotName={displayName}
       currentTemp={weatherData.current.temp}
       currentCondition={weatherData.current.condition}
       humidity={weatherData.current.humidity}

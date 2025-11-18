@@ -20,6 +20,7 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
+    name: '',
     cadastral_number: '',
     area: '',
     crop: '',
@@ -34,6 +35,7 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
 
     const { error } = await supabase.from('plots').insert({
       company_id: companyId,
+      name: formData.name || null,
       cadastral_number: formData.cadastral_number,
       area: parseFloat(formData.area),
       crop: formData.crop,
@@ -54,6 +56,7 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
         description: 'Участок добавлен',
       });
       setFormData({
+        name: '',
         cadastral_number: '',
         area: '',
         crop: '',
@@ -93,6 +96,15 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Название участка</Label>
+            <Input
+              id="name"
+              placeholder="Северное поле"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="cadastral_number">Кадастровый номер *</Label>

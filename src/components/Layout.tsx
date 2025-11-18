@@ -248,7 +248,7 @@ export default function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Page Content */}
-        <main className="p-6">{children}</main>
+        <main className="p-6 overflow-x-hidden max-w-full">{children}</main>
       </div>
     </div>
   );
