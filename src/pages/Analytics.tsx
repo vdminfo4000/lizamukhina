@@ -14,6 +14,7 @@ import { useEffect } from "react";
 
 interface Plot {
   id: string;
+  name?: string | null;
   cadastral_number: string;
   area: number;
   crop: string | null;
@@ -73,7 +74,7 @@ export default function Analytics() {
   // Generate harvest priority data from plots
   const harvestPriority = plots.map((plot, index) => ({
     priority: index + 1,
-    plot: `${plot.crop || 'Культура'} (${plot.cadastral_number})`,
+    plot: plot.name || plot.cadastral_number,
     culture: plot.crop || 'Не указано',
     area: plot.area,
     maturity: 92 - (index * 7),
@@ -109,7 +110,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       <div>
         <h1 className="mb-2 text-3xl font-bold text-foreground">Аналитика и прогноз</h1>
         <p className="text-muted-foreground">

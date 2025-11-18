@@ -415,7 +415,7 @@ export default function Monitoring() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       <div>
         <h1 className="mb-2 text-3xl font-bold text-foreground">Мониторинг урожая</h1>
         <p className="text-muted-foreground">
@@ -515,9 +515,9 @@ export default function Monitoring() {
               <Card key={index}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>{data.plot}</CardTitle>
-                      <CardDescription>Площадь: {data.area} га</CardDescription>
+                  <div>
+                      <CardTitle>{plot.name || plot.cadastral_number}</CardTitle>
+                      <CardDescription>Площадь: {data.area} га • Кад. номер: {plot.cadastral_number}</CardDescription>
                     </div>
                     {canEdit && (
                       <Dialog>
@@ -846,22 +846,48 @@ export default function Monitoring() {
                   </div>
                 </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  {data.sensors.map((sensor, sIndex) => (
-                    <Card key={sIndex} className="border-2">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <sensor.icon className={`h-5 w-5 ${sensor.color}`} />
-                          <Badge variant={sensor.status === "normal" ? "default" : "destructive"}>
-                            {sensor.status === "normal" ? "Норма" : "Предупр."}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">{sensor.type}</p>
-                        <p className="text-2xl font-bold">{sensor.value}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                {plotSensors.length > 0 ? (
+                  <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-6">
+                    {plotSensors.map((sensor) => {
+                      const hasData = sensor.last_reading && typeof sensor.last_reading === 'object' && 'value' in sensor.last_reading;
+                      const sensorValue = hasData ? sensor.last_reading.value : null;
+                      const isOffline = !hasData || sensor.status !== 'active';
+                      
+                      const getSensorIcon = () => {
+                        switch (sensor.sensor_type) {
+                          case 'moisture': return Droplets;
+                          case 'temperature': case 'air_temperature': return Thermometer;
+                          case 'wind': return Wind;
+                          case 'light': return Sun;
+                          default: return Activity;
+                        }
+                      };
+                      
+                      const SensorIcon = getSensorIcon();
+                      
+                      return (
+                        <Card key={sensor.id} className={`border ${isOffline ? 'bg-destructive/10 border-destructive' : 'border-border'}`}>
+                          <CardContent className="p-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <SensorIcon className={`h-3 w-3 ${isOffline ? 'text-destructive' : 'text-primary'}`} />
+                              {isOffline ? (
+                                <WifiOff className="h-3 w-3 text-destructive" />
+                              ) : (
+                                <Wifi className="h-3 w-3 text-green-500" />
+                              )}
+                            </div>
+                            <p className="text-xs font-medium text-muted-foreground truncate mb-0.5">{sensor.name}</p>
+                            <p className="text-sm font-bold">{sensorValue !== null ? sensorValue : '—'}</p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Датчики не добавлены. Нажмите "Настроить датчики" для добавления.
+                  </p>
+                )}
               </CardContent>
               </Card>
             );
