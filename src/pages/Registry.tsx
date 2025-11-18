@@ -18,6 +18,7 @@ import { EditFacilityDialog } from "@/components/forms/EditFacilityDialog";
 import { IntegrationsDialog } from "@/components/forms/IntegrationsDialog";
 import { AssetCommentsDialog } from "@/components/forms/AssetCommentsDialog";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
+import { RegistryMap } from "@/components/RegistryMap";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -240,6 +241,9 @@ export default function Registry() {
 
   return (
     <div className="space-y-6">
+      {/* Карта с визуализацией участков и объектов */}
+      <RegistryMap plots={plots} equipment={equipment} facilities={facilities} />
+
       <div>
         <h1 className="mb-2 text-3xl font-bold text-foreground">Реестр активов</h1>
         <p className="text-muted-foreground">

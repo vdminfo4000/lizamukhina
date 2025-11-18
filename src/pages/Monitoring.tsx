@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { SensorSettingsDialog } from "@/components/forms/SensorSettingsDialog";
+import { WeatherWidget } from "@/components/WeatherWidget";
 
 interface Plot {
   id: string;
@@ -48,14 +49,26 @@ interface Sensor {
   created_at: string;
 }
 
-const weatherData = {
-  current: { temp: "20°C", humidity: "65%", wind: "12 км/ч", pressure: "1013 мбар" },
-  forecast: [
-    { day: "Сегодня", temp: "20°C", condition: "Облачно" },
-    { day: "Завтра", temp: "22°C", condition: "Ясно" },
-    { day: "Вт", temp: "19°C", condition: "Дождь" },
-    { day: "Ср", temp: "18°C", condition: "Пасмурно" },
-  ],
+const getWeatherForPlot = (plotId: string) => {
+  const weatherVariations = [
+    { current: { temp: 20, condition: "Облачно" }, forecast: [
+      { day: "Сегодня", temp: 20, condition: "Облачно" },
+      { day: "Завтра", temp: 22, condition: "Ясно" },
+      { day: "Послезавтра", temp: 19, condition: "Дождь" }
+    ]},
+    { current: { temp: 18, condition: "Ясно" }, forecast: [
+      { day: "Сегодня", temp: 18, condition: "Ясно" },
+      { day: "Завтра", temp: 19, condition: "Облачно" },
+      { day: "Послезавтра", temp: 21, condition: "Ясно" }
+    ]},
+    { current: { temp: 22, condition: "Дождь" }, forecast: [
+      { day: "Сегодня", temp: 22, condition: "Дождь" },
+      { day: "Завтра", temp: 20, condition: "Облачно" },
+      { day: "Послезавтра", temp: 18, condition: "Пасмурно" }
+    ]}
+  ];
+  const index = plotId ? parseInt(plotId.slice(-1), 16) % weatherVariations.length : 0;
+  return weatherVariations[index];
 };
 
 const chartData = [
@@ -482,6 +495,24 @@ export default function Monitoring() {
       </div>
 
       <Tabs defaultValue="sensors" className="space-y-4">
+        {/* Виджеты погоды для каждого участка */}
+        {plots.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            {plots.map((plot) => {
+              const weather = getWeatherForPlot(plot.id);
+              return (
+                <WeatherWidget
+                  key={plot.id}
+                  plotName={`${plot.cadastral_number} - ${plot.crop || 'Без культуры'}`}
+                  currentTemp={weather.current.temp}
+                  currentCondition={weather.current.condition}
+                  forecast={weather.forecast}
+                />
+              );
+            })}
+          </div>
+        )}
+
         <TabsList>
           <TabsTrigger value="sensors">Датчики</TabsTrigger>
           <TabsTrigger value="maturity">Спелость</TabsTrigger>
@@ -898,56 +929,53 @@ export default function Monitoring() {
         </TabsContent>
 
         <TabsContent value="weather" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Текущая погода</CardTitle>
-                <CardDescription>Условия на текущий момент</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4">
-                  <div className="flex items-center gap-4">
-                    <Thermometer className="h-8 w-8 text-orange-600" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Температура</p>
-                      <p className="text-2xl font-bold">{weatherData.current.temp}</p>
+          <div className="grid gap-4">
+            {plots.map((plot) => {
+              const weather = getWeatherForPlot(plot.id);
+              return (
+                <Card key={plot.id}>
+                  <CardHeader>
+                    <CardTitle>{plot.cadastral_number} - {plot.crop || 'Без культуры'}</CardTitle>
+                    <CardDescription>Погодные условия для участка</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <h4 className="font-semibold mb-3">Текущая погода</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-4">
+                            <Thermometer className="h-6 w-6 text-orange-600" />
+                            <div>
+                              <p className="text-sm text-muted-foreground">Температура</p>
+                              <p className="text-xl font-bold">{weather.current.temp}°C</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Sun className="h-6 w-6 text-yellow-600" />
+                            <div>
+                              <p className="text-sm text-muted-foreground">Условия</p>
+                              <p className="text-lg font-semibold">{weather.current.condition}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-3">Прогноз на 3 дня</h4>
+                        <div className="space-y-2">
+                          {weather.forecast.map((day, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                              <span className="font-medium text-sm">{day.day}</span>
+                              <span className="text-muted-foreground text-sm">{day.condition}</span>
+                              <span className="font-bold">{day.temp}°C</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Droplets className="h-8 w-8 text-blue-600" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Влажность</p>
-                      <p className="text-2xl font-bold">{weatherData.current.humidity}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Wind className="h-8 w-8 text-gray-600" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Ветер</p>
-                      <p className="text-2xl font-bold">{weatherData.current.wind}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Прогноз на 4 дня</CardTitle>
-                <CardDescription>Планирование полевых работ</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {weatherData.forecast.map((day, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <span className="font-medium">{day.day}</span>
-                      <span className="text-muted-foreground">{day.condition}</span>
-                      <span className="font-bold">{day.temp}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
