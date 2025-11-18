@@ -183,7 +183,8 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
       </div>
       <div 
         ref={mapContainer} 
-        className="h-[400px]"
+        className="w-full"
+        style={{ height: '40vh' }}
       />
     </Card>
   );

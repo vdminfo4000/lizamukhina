@@ -222,7 +222,7 @@ export default function Profile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="inn">ИНН</Label>
+                <Label htmlFor="inn">ИНН сотрудника</Label>
                 <Input
                   id="inn"
                   value={profile.inn || ''}

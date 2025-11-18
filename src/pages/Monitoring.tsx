@@ -504,7 +504,6 @@ export default function Monitoring() {
         <TabsList>
           <TabsTrigger value="sensors">Датчики</TabsTrigger>
           <TabsTrigger value="maturity">Спелость</TabsTrigger>
-          <TabsTrigger value="weather">Погода</TabsTrigger>
           <TabsTrigger value="events">События</TabsTrigger>
         </TabsList>
 
@@ -957,20 +956,6 @@ export default function Monitoring() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="weather" className="space-y-4">
-          <div className="grid gap-4">
-            {plots.map((plot) => (
-              <PlotWeatherDetail
-                key={plot.id}
-                plotName={plot.name}
-                cadastralNumber={plot.cadastral_number}
-                latitude={plot.location_lat}
-                longitude={plot.location_lng}
-              />
-            ))}
-          </div>
         </TabsContent>
 
         <TabsContent value="events" className="space-y-4">
