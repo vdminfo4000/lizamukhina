@@ -23,6 +23,7 @@ interface Message {
   created_at: string;
   is_read: boolean;
   sender_id: string;
+  receiver_id: string | null;
 }
 
 interface Email {
@@ -474,7 +475,9 @@ export default function CRM() {
                         <p className="text-xs text-muted-foreground mt-1">Начните общение с коллегами</p>
                       </div>
                     ) : (
-                      messages.map((msg) => {
+                      messages
+                        .filter(msg => selectedReceiver === "all" || msg.sender_id === selectedReceiver || msg.receiver_id === selectedReceiver)
+                        .map((msg) => {
                         const isOwn = msg.sender_id === userId;
                         const sender = employees.find(e => e.id === msg.sender_id);
                         const initials = sender 
@@ -701,10 +704,16 @@ export default function CRM() {
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                <Button>
+                <Button onClick={() => document.getElementById('file-upload')?.click()} disabled={uploadingFile}>
                   <Upload className="w-4 h-4 mr-2" />
-                  Загрузить документ
+                  {uploadingFile ? 'Загрузка...' : 'Загрузить документ'}
                 </Button>
+                <input
+                  id="file-upload"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
               </div>
               <ScrollArea className="h-[400px]">
                 <div className="space-y-2">
@@ -836,13 +845,41 @@ export default function CRM() {
                               <p className="text-sm text-muted-foreground">{contact.organization}</p>
                             )}
                           </div>
-                          <Badge>
-                            {contact.contact_type === "client"
-                              ? "Клиент"
-                              : contact.contact_type === "partner"
-                              ? "Партнер"
-                              : "Поставщик"}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge>
+                              {contact.contact_type === "client"
+                                ? "Клиент"
+                                : contact.contact_type === "partner"
+                                ? "Партнер"
+                                : "Поставщик"}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                const { error } = await supabase
+                                  .from('crm_contacts')
+                                  .delete()
+                                  .eq('id', contact.id);
+                                
+                                if (error) {
+                                  toast({
+                                    title: 'Ошибка',
+                                    description: 'Не удалось удалить контакт',
+                                    variant: 'destructive',
+                                  });
+                                } else {
+                                  toast({
+                                    title: 'Успешно',
+                                    description: 'Контакт удален',
+                                  });
+                                  if (companyId) loadContacts(companyId);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="text-sm space-y-1">
                           {contact.email && <p>Email: {contact.email}</p>}
