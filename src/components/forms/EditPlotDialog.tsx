@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Map } from "lucide-react";
+import { YandexMapDialog } from "./YandexMapDialog";
 
 interface EditPlotDialogProps {
   plot: {
@@ -23,6 +25,7 @@ interface EditPlotDialogProps {
 
 export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlotDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     cadastral_number: plot.cadastral_number,
@@ -65,6 +68,14 @@ export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlot
       onOpenChange(false);
       onSuccess();
     }
+  };
+
+  const handleCoordinatesSelect = (lat: number, lng: number) => {
+    setFormData({
+      ...formData,
+      location_lat: lat.toFixed(6),
+      location_lng: lng.toFixed(6)
+    });
   };
 
   return (
@@ -124,6 +135,15 @@ export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlot
               />
             </div>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setMapDialogOpen(true)}
+          >
+            <Map className="h-4 w-4 mr-2" />
+            Выбрать на карте
+          </Button>
           <div>
             <Label htmlFor="address">Адрес</Label>
             <Input
@@ -141,6 +161,14 @@ export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlot
             </Button>
           </div>
         </form>
+
+        <YandexMapDialog
+          open={mapDialogOpen}
+          onOpenChange={setMapDialogOpen}
+          onCoordinatesSelect={handleCoordinatesSelect}
+          initialLat={formData.location_lat}
+          initialLng={formData.location_lng}
+        />
       </DialogContent>
     </Dialog>
   );

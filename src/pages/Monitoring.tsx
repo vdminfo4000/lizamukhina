@@ -15,6 +15,7 @@ import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
+import { SensorSettingsDialog } from "@/components/forms/SensorSettingsDialog";
 
 interface Plot {
   id: string;
@@ -102,6 +103,9 @@ export default function Monitoring() {
     apiUrl: "",
     apiKey: "",
     apiMethod: "GET",
+    thresholdMin: "",
+    thresholdMax: "",
+    alertEnabled: false
   });
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -319,12 +323,18 @@ export default function Monitoring() {
         apiUrl: settings.apiUrl || "",
         apiKey: settings.apiKey || "",
         apiMethod: settings.apiMethod || "GET",
+        thresholdMin: (sensor as any).threshold_min?.toString() || "",
+        thresholdMax: (sensor as any).threshold_max?.toString() || "",
+        alertEnabled: (sensor as any).alert_enabled || false
       });
     } else {
       setSensorApiSettings({
         apiUrl: "",
         apiKey: "",
         apiMethod: "GET",
+        thresholdMin: (sensor as any).threshold_min?.toString() || "",
+        thresholdMax: (sensor as any).threshold_max?.toString() || "",
+        alertEnabled: (sensor as any).alert_enabled || false
       });
     }
     setSettingsDialogOpen(true);
@@ -339,26 +349,27 @@ export default function Monitoring() {
         last_reading: {
           ...sensorApiSettings,
           value: null, // Will be populated when API is called
-        }
+        },
+        threshold_min: sensorApiSettings.thresholdMin ? parseFloat(sensorApiSettings.thresholdMin) : null,
+        threshold_max: sensorApiSettings.thresholdMax ? parseFloat(sensorApiSettings.thresholdMax) : null,
+        alert_enabled: sensorApiSettings.alertEnabled
       })
       .eq('id', selectedSensorForSettings);
 
     if (error) {
       toast({
-        title: 'Ошибка',
-        description: 'Не удалось сохранить настройки',
-        variant: 'destructive',
+        title: "Ошибка",
+        description: error.message,
+        variant: "destructive"
       });
-      return;
+    } else {
+      toast({
+        title: "Успешно",
+        description: "Настройки датчика сохранены"
+      });
+      setSettingsDialogOpen(false);
+      loadZones();
     }
-
-    toast({
-      title: 'Успешно',
-      description: 'Настройки API сохранены',
-    });
-
-    setSettingsDialogOpen(false);
-    loadZones();
   };
 
   // Mock maturity data based on plots
@@ -989,55 +1000,13 @@ export default function Monitoring() {
       </Tabs>
 
       {/* Sensor API Settings Dialog */}
-      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Настройки подключения API датчика</DialogTitle>
-            <DialogDescription>
-              Настройте параметры для получения данных с датчика через API
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="apiUrl">API URL</Label>
-              <Input
-                id="apiUrl"
-                placeholder="https://api.example.com/sensor/data"
-                value={sensorApiSettings.apiUrl}
-                onChange={(e) => setSensorApiSettings({ ...sensorApiSettings, apiUrl: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="Введите API ключ"
-                value={sensorApiSettings.apiKey}
-                onChange={(e) => setSensorApiSettings({ ...sensorApiSettings, apiKey: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="apiMethod">HTTP метод</Label>
-              <Select
-                value={sensorApiSettings.apiMethod}
-                onValueChange={(value) => setSensorApiSettings({ ...sensorApiSettings, apiMethod: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="GET">GET</SelectItem>
-                  <SelectItem value="POST">POST</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleSaveSensorSettings} className="w-full">
-              Сохранить настройки
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SensorSettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+        settings={sensorApiSettings}
+        onSettingsChange={setSensorApiSettings}
+        onSave={handleSaveSensorSettings}
+      />
     </div>
   );
 }
