@@ -11,6 +11,7 @@ import { YandexMapDialog } from "./YandexMapDialog";
 interface EditPlotDialogProps {
   plot: {
     id: string;
+    name?: string | null;
     cadastral_number: string;
     area: number;
     crop: string | null;
@@ -28,6 +29,7 @@ export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlot
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const { toast } = useToast();
   const [formData, setFormData] = useState({
+    name: plot.name || "",
     cadastral_number: plot.cadastral_number,
     area: plot.area.toString(),
     crop: plot.crop || "",
@@ -43,6 +45,7 @@ export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlot
     const { error } = await supabase
       .from("plots")
       .update({
+        name: formData.name || null,
         cadastral_number: formData.cadastral_number,
         area: parseFloat(formData.area),
         crop: formData.crop || null,
@@ -70,11 +73,12 @@ export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlot
     }
   };
 
-  const handleCoordinatesSelect = (lat: number, lng: number) => {
+  const handleCoordinatesSelect = (lat: number, lng: number, address?: string) => {
     setFormData({
       ...formData,
       location_lat: lat.toFixed(6),
-      location_lng: lng.toFixed(6)
+      location_lng: lng.toFixed(6),
+      address: address || formData.address
     });
   };
 
@@ -85,6 +89,15 @@ export function EditPlotDialog({ plot, open, onOpenChange, onSuccess }: EditPlot
           <DialogTitle>Редактировать участок</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Название участка</Label>
+            <Input
+              id="name"
+              placeholder="Северное поле"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+          </div>
           <div>
             <Label htmlFor="cadastral_number">Кадастровый номер</Label>
             <Input

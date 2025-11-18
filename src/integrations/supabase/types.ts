@@ -630,6 +630,7 @@ export type Database = {
           id: string
           location_lat: number | null
           location_lng: number | null
+          name: string | null
           status: string | null
           updated_at: string
         }
@@ -643,6 +644,7 @@ export type Database = {
           id?: string
           location_lat?: number | null
           location_lng?: number | null
+          name?: string | null
           status?: string | null
           updated_at?: string
         }
@@ -656,6 +658,7 @@ export type Database = {
           id?: string
           location_lat?: number | null
           location_lng?: number | null
+          name?: string | null
           status?: string | null
           updated_at?: string
         }

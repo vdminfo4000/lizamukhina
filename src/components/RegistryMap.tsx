@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface Plot {
   id: string;
+  name?: string | null;
   cadastral_number: string;
   area: number;
   crop: string | null;
@@ -28,6 +29,8 @@ interface Facility {
   name: string;
   type: string;
   address: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
   status: string;
 }
 
@@ -110,23 +113,48 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
       : plots.filter(p => p.crop === selectedCrop && p.location_lat && p.location_lng);
 
     filteredPlots.forEach((plot) => {
+      const displayName = plot.name || plot.cadastral_number;
       const placemark = new window.ymaps.Placemark(
         [plot.location_lat, plot.location_lng],
         {
-          balloonContentHeader: `<strong>${plot.cadastral_number}</strong>`,
+          balloonContentHeader: `<strong>${displayName}</strong>`,
           balloonContentBody: `
             <div style="padding: 8px;">
+              <p><strong>Кадастровый номер:</strong> ${plot.cadastral_number}</p>
               <p><strong>Площадь:</strong> ${plot.area} га</p>
               <p><strong>Культура:</strong> ${plot.crop || 'Не указана'}</p>
               <p><strong>Адрес:</strong> ${plot.address || 'Не указан'}</p>
               <p><strong>Статус:</strong> ${plot.status === 'active' ? 'Активен' : 'Неактивен'}</p>
             </div>
           `,
-          hintContent: plot.cadastral_number
+          hintContent: displayName
         },
         {
           preset: plot.status === 'active' ? 'islands#greenCircleDotIcon' : 'islands#grayCircleDotIcon',
           iconColor: plot.crop ? '#4CAF50' : '#FFA726'
+        }
+      );
+      placemarks.push(placemark);
+    });
+
+    // Add facilities to the map
+    facilities.filter(f => f.location_lat && f.location_lng).forEach((facility) => {
+      const placemark = new window.ymaps.Placemark(
+        [facility.location_lat, facility.location_lng],
+        {
+          balloonContentHeader: `<strong>${facility.name}</strong>`,
+          balloonContentBody: `
+            <div style="padding: 8px;">
+              <p><strong>Тип:</strong> ${facility.type}</p>
+              <p><strong>Адрес:</strong> ${facility.address || 'Не указан'}</p>
+              <p><strong>Статус:</strong> ${facility.status === 'active' ? 'Активен' : 'Неактивен'}</p>
+            </div>
+          `,
+          hintContent: facility.name
+        },
+        {
+          preset: facility.status === 'active' ? 'islands#blueWarehouseIcon' : 'islands#grayWarehouseIcon',
+          iconColor: '#2196F3'
         }
       );
       placemarks.push(placemark);
@@ -139,11 +167,11 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
         map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
       }
     }
-  }, [map, clusterer, plots, selectedCrop]);
+  }, [map, clusterer, plots, facilities, selectedCrop]);
 
   return (
-    <Card className={`transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'mb-6'}`}>
-      <div className="flex items-center justify-between p-4 border-b">
+    <Card className={`transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'mb-6 w-full'}`}>
+      <div className="flex items-center justify-between p-4 border-b flex-wrap gap-2">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-primary" />
@@ -192,7 +220,7 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
       
       <div 
         ref={mapContainer} 
-        className={`w-full ${isFullscreen ? 'h-[calc(100vh-80px)]' : 'h-[25vh]'} min-h-[200px]`}
+        className={`w-full ${isFullscreen ? 'h-[calc(100vh-80px)]' : 'h-[25vh]'} min-h-[200px] max-w-full`}
       />
     </Card>
   );

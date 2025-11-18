@@ -29,6 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 interface Plot {
   id: string;
+  name?: string | null;
   cadastral_number: string;
   area: number;
   crop: string | null;
@@ -53,6 +54,8 @@ interface Facility {
   type: string;
   capacity: string | null;
   address: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
   status: string;
 }
 
@@ -240,7 +243,7 @@ export default function Registry() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Карта с визуализацией участков и объектов */}
       <RegistryMap plots={plots} equipment={equipment} facilities={facilities} />
 

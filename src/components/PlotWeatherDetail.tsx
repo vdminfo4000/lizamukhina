@@ -4,8 +4,8 @@ import { useWeatherData } from "@/hooks/useWeatherData";
 import { Skeleton } from "./ui/skeleton";
 
 interface PlotWeatherDetailProps {
-  plotName: string;
-  cadastralNumber: string;
+  plotName?: string | null;
+  cadastralNumber?: string;
   latitude: number | null;
   longitude: number | null;
 }
@@ -17,12 +17,14 @@ export function PlotWeatherDetail({
   longitude 
 }: PlotWeatherDetailProps) {
   const { weatherData, loading } = useWeatherData(latitude, longitude);
+  
+  const displayName = plotName || cadastralNumber || 'Участок';
 
   if (loading || !weatherData) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{cadastralNumber} - {plotName}</CardTitle>
+          <CardTitle>{displayName}</CardTitle>
           <CardDescription>Погодные условия для участка</CardDescription>
         </CardHeader>
         <CardContent>
@@ -35,7 +37,7 @@ export function PlotWeatherDetail({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{cadastralNumber} - {plotName}</CardTitle>
+        <CardTitle>{displayName}</CardTitle>
         <CardDescription>Погодные условия для участка</CardDescription>
       </CardHeader>
       <CardContent>
