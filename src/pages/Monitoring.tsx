@@ -175,7 +175,10 @@ export default function Monitoring() {
       // Load sensors for all zones
       const { data: sensorsData } = await supabase
         .from('monitoring_sensors')
-        .select('*')
+        .select(`
+          *,
+          zone:monitoring_zones(id, name)
+        `)
         .in('zone_id', zonesData.map(z => z.id));
       
       if (sensorsData) {
