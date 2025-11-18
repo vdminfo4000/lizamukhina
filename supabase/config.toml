@@ -1,1 +1,4 @@
 project_id = "kogjgqlwhbibriamvhqj"
+
+[functions.sensor-data-fetch]
+verify_jwt = false

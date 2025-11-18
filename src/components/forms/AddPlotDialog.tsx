@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus } from 'lucide-react';
+import { Plus, Map } from 'lucide-react';
+import { YandexMapDialog } from './YandexMapDialog';
 
 interface AddPlotDialogProps {
   companyId: string;
@@ -15,6 +16,7 @@ interface AddPlotDialogProps {
 export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -64,6 +66,14 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
     }
 
     setLoading(false);
+  };
+
+  const handleCoordinatesSelect = (lat: number, lng: number) => {
+    setFormData({
+      ...formData,
+      location_lat: lat.toFixed(6),
+      location_lng: lng.toFixed(6)
+    });
   };
 
   return (
@@ -142,6 +152,16 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
             </div>
           </div>
 
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setMapDialogOpen(true)}
+          >
+            <Map className="h-4 w-4 mr-2" />
+            Выбрать на карте
+          </Button>
+
           <div className="space-y-2">
             <Label htmlFor="address">Адрес участка</Label>
             <Input
@@ -161,6 +181,14 @@ export function AddPlotDialog({ companyId, onSuccess }: AddPlotDialogProps) {
             </Button>
           </div>
         </form>
+
+        <YandexMapDialog
+          open={mapDialogOpen}
+          onOpenChange={setMapDialogOpen}
+          onCoordinatesSelect={handleCoordinatesSelect}
+          initialLat={formData.location_lat}
+          initialLng={formData.location_lng}
+        />
       </DialogContent>
     </Dialog>
   );

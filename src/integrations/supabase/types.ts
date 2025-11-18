@@ -481,6 +481,7 @@ export type Database = {
       }
       monitoring_sensors: {
         Row: {
+          alert_enabled: boolean | null
           battery_level: number | null
           calibration_date: string | null
           created_at: string
@@ -490,10 +491,13 @@ export type Database = {
           sensor_type: string
           serial_number: string | null
           status: string | null
+          threshold_max: number | null
+          threshold_min: number | null
           updated_at: string
           zone_id: string
         }
         Insert: {
+          alert_enabled?: boolean | null
           battery_level?: number | null
           calibration_date?: string | null
           created_at?: string
@@ -503,10 +507,13 @@ export type Database = {
           sensor_type: string
           serial_number?: string | null
           status?: string | null
+          threshold_max?: number | null
+          threshold_min?: number | null
           updated_at?: string
           zone_id: string
         }
         Update: {
+          alert_enabled?: boolean | null
           battery_level?: number | null
           calibration_date?: string | null
           created_at?: string
@@ -516,6 +523,8 @@ export type Database = {
           sensor_type?: string
           serial_number?: string | null
           status?: string | null
+          threshold_max?: number | null
+          threshold_min?: number | null
           updated_at?: string
           zone_id?: string
         }
