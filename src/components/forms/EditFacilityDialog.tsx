@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { MapPin } from 'lucide-react';
+import { YandexMapDialog } from './YandexMapDialog';
 
 interface EditFacilityDialogProps {
   facility: {
@@ -21,13 +23,25 @@ interface EditFacilityDialogProps {
 
 export function EditFacilityDialog({ facility, open, onOpenChange, onSuccess }: EditFacilityDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [showMapDialog, setShowMapDialog] = useState(false);
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: facility.name,
     type: facility.type,
     capacity: facility.capacity || "",
     address: facility.address || "",
+    location_lat: "",
+    location_lng: ""
   });
+
+  const handleCoordinatesSelect = (lat: number, lng: number, address?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      location_lat: lat.toString(),
+      location_lng: lng.toString(),
+      address: address || prev.address
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,12 +110,31 @@ export function EditFacilityDialog({ facility, open, onOpenChange, onSuccess }: 
           </div>
           <div>
             <Label htmlFor="address">Адрес</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowMapDialog(true)}
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Карта
+              </Button>
+            </div>
           </div>
+
+          <YandexMapDialog
+            open={showMapDialog}
+            onOpenChange={setShowMapDialog}
+            onCoordinatesSelect={handleCoordinatesSelect}
+            initialLat={formData.location_lat}
+            initialLng={formData.location_lng}
+          />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Отмена

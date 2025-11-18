@@ -1,4 +1,4 @@
 project_id = "kogjgqlwhbibriamvhqj"
 
-[functions.sensor-data-fetch]
+[functions.weather-fetch]
 verify_jwt = false
