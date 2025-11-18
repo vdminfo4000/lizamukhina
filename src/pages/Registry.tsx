@@ -343,7 +343,7 @@ export default function Registry() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Кадастровый номер</TableHead>
+                      <TableHead>Название участка</TableHead>
                       <TableHead>Площадь (Га)</TableHead>
                       <TableHead>Культура</TableHead>
                       <TableHead>Адрес</TableHead>
@@ -354,7 +354,7 @@ export default function Registry() {
                   <TableBody>
                     {filteredPlots.map((plot) => (
                       <TableRow key={plot.id}>
-                        <TableCell className="font-medium">{plot.cadastral_number}</TableCell>
+                        <TableCell className="font-medium">{plot.name || plot.cadastral_number}</TableCell>
                         <TableCell>{plot.area}</TableCell>
                         <TableCell>{plot.crop || '-'}</TableCell>
                         <TableCell>{plot.address || '-'}</TableCell>

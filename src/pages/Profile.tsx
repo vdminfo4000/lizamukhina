@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Briefcase, Upload } from "lucide-react";
+import CertificatesDialog from "@/components/forms/CertificatesDialog";
 
 interface ProfileData {
   id: string;
@@ -17,6 +18,8 @@ interface ProfileData {
   phone: string | null;
   position: string | null;
   avatar_url: string | null;
+  snils: string | null;
+  inn: string | null;
 }
 
 export default function Profile() {
@@ -62,6 +65,8 @@ export default function Profile() {
         last_name: profile.last_name,
         phone: profile.phone,
         position: profile.position,
+        snils: profile.snils,
+        inn: profile.inn,
       })
       .eq('id', profile.id);
 
@@ -129,59 +134,112 @@ export default function Profile() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-6">
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center gap-4 pb-6 border-b">
               <Avatar className="h-24 w-24">
                 <AvatarImage src={profile.avatar_url || undefined} />
                 <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
               </Avatar>
-              <div>
-                <Label htmlFor="avatar" className="cursor-pointer">
-                  <div className="flex items-center gap-2 text-sm text-primary hover:underline">
-                    <Upload className="h-4 w-4" />
-                    Загрузить фото
-                  </div>
-                </Label>
-                <Input
-                  id="avatar"
+              <div className="flex flex-col gap-2 w-full max-w-xs">
+                <input
                   type="file"
-                  accept="image/*"
+                  id="avatar-upload"
                   className="hidden"
+                  accept="image/*"
                   onChange={handleAvatarUpload}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  JPG, PNG или GIF. Максимум 2MB.
-                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('avatar-upload')?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Загрузить фото
+                </Button>
+                <CertificatesDialog userId={profile.id} />
               </div>
             </div>
 
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="first_name">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Имя
-                  </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">
+                  <User className="inline mr-2 h-4 w-4" />
+                  Имя
                 </Label>
                 <Input
-                  id="first_name"
+                  id="firstName"
                   value={profile.first_name || ''}
                   onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
-                  placeholder="Введите имя"
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="last_name">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Фамилия
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">
+                  <User className="inline mr-2 h-4 w-4" />
+                  Фамилия
                 </Label>
                 <Input
-                  id="last_name"
+                  id="lastName"
                   value={profile.last_name || ''}
                   onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
-                  placeholder="Введите фамилию"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  <Mail className="inline mr-2 h-4 w-4" />
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={profile.email || ''}
+                  disabled
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">
+                  <Phone className="inline mr-2 h-4 w-4" />
+                  Телефон
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={profile.phone || ''}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="snils">СНИЛС</Label>
+                <Input
+                  id="snils"
+                  value={profile.snils || ''}
+                  onChange={(e) => setProfile({ ...profile, snils: e.target.value })}
+                  placeholder="000-000-000 00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="inn">ИНН</Label>
+                <Input
+                  id="inn"
+                  value={profile.inn || ''}
+                  onChange={(e) => setProfile({ ...profile, inn: e.target.value })}
+                  placeholder="000000000000"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="position">
+                  <Briefcase className="inline mr-2 h-4 w-4" />
+                  Должность
+                </Label>
+                <Input
+                  id="position"
+                  value={profile.position || ''}
+                  onChange={(e) => setProfile({ ...profile, position: e.target.value })}
                 />
               </div>
 
