@@ -20,6 +20,8 @@ import { WeatherWidget } from "@/components/WeatherWidget";
 import { PlotWeatherWidget } from "@/components/PlotWeatherWidget";
 import { PlotWeatherDetail } from "@/components/PlotWeatherDetail";
 import { useWeatherData } from "@/hooks/useWeatherData";
+import { useDragScroll } from "@/hooks/useDragScroll";
+import { SensorZone } from "@/components/SensorZone";
 
 interface Plot {
   id: string;
@@ -73,6 +75,7 @@ const eventLog = [
 ];
 
 export default function Monitoring() {
+  const weatherScrollRef = useDragScroll();
   const [plots, setPlots] = useState<Plot[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [sensors, setSensors] = useState<Sensor[]>([]);
@@ -427,65 +430,10 @@ export default function Monitoring() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50">
-                <Activity className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Активных участков</p>
-                <p className="text-2xl font-bold text-foreground">{plots.filter(p => p.status === 'active').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
-                <Droplets className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Ср. влажность</p>
-                <p className="text-2xl font-bold text-foreground">62%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50">
-                <AlertTriangle className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Требует внимания</p>
-                <p className="text-2xl font-bold text-foreground">0</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50">
-                <Thermometer className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Температура</p>
-                <p className="text-2xl font-bold text-foreground">20°C</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Tabs defaultValue="sensors" className="space-y-4">
         {/* Виджеты погоды для каждого участка */}
         {plots.length > 0 && (
-          <div className="mb-6 w-full overflow-x-auto">
+          <div ref={weatherScrollRef} className="mb-6 w-full overflow-x-auto">
             <div className="flex flex-nowrap gap-4 pb-4 min-w-0">
               {plots.map((plot) => (
                 <div key={plot.id} className="flex-shrink-0 w-[280px]">
@@ -858,48 +806,7 @@ export default function Monitoring() {
                         return acc;
                       }, {})
                     ).map(([zoneName, zoneSensors]: [string, any]) => (
-                      <div key={zoneName} className="space-y-2">
-                        <h4 className="text-sm font-semibold text-muted-foreground">{zoneName}</h4>
-                        <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 w-full min-w-0">
-                          {zoneSensors.map((sensor: any) => {
-                            const hasData = sensor.last_reading && typeof sensor.last_reading === 'object' && 'value' in sensor.last_reading;
-                            const sensorValue = hasData ? sensor.last_reading.value : null;
-                            const isOffline = !hasData || sensor.status !== 'active';
-                            
-                            const getSensorIcon = () => {
-                              switch (sensor.sensor_type) {
-                                case 'moisture': return Droplets;
-                                case 'temperature': case 'air_temperature': return Thermometer;
-                                case 'wind': return Wind;
-                                case 'light': return Sun;
-                                default: return Activity;
-                              }
-                            };
-                            
-                            const SensorIcon = getSensorIcon();
-                            
-                            return (
-                              <Card 
-                                key={sensor.id} 
-                                className={`flex-shrink-0 w-28 border ${isOffline ? 'bg-destructive/10 border-destructive' : 'border-border'}`}
-                              >
-                                <CardContent className="p-2">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <SensorIcon className={`h-3 w-3 ${isOffline ? 'text-destructive' : 'text-primary'}`} />
-                                    {isOffline ? (
-                                      <WifiOff className="h-3 w-3 text-destructive" />
-                                    ) : (
-                                      <Wifi className="h-3 w-3 text-green-500" />
-                                    )}
-                                  </div>
-                                  <p className="text-[10px] font-medium text-muted-foreground truncate mb-0.5">{sensor.name}</p>
-                                  <p className="text-sm font-bold">{sensorValue !== null ? sensorValue : '—'}</p>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      <SensorZone key={zoneName} zoneName={zoneName} sensors={zoneSensors} />
                     ))}
                   </div>
                 ) : (
