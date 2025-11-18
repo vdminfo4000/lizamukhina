@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus } from 'lucide-react';
+import { Plus, MapPin } from 'lucide-react';
+import { YandexMapDialog } from './YandexMapDialog';
 
 interface AddFacilityDialogProps {
   companyId: string;
@@ -15,6 +16,7 @@ interface AddFacilityDialogProps {
 export function AddFacilityDialog({ companyId, onSuccess }: AddFacilityDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showMapDialog, setShowMapDialog] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -22,7 +24,18 @@ export function AddFacilityDialog({ companyId, onSuccess }: AddFacilityDialogPro
     type: '',
     capacity: '',
     address: '',
+    location_lat: '',
+    location_lng: ''
   });
+
+  const handleCoordinatesSelect = (lat: number, lng: number, address?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      location_lat: lat.toString(),
+      location_lng: lng.toString(),
+      address: address || prev.address
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +65,8 @@ export function AddFacilityDialog({ companyId, onSuccess }: AddFacilityDialogPro
         type: '',
         capacity: '',
         address: '',
+        location_lat: '',
+        location_lng: ''
       });
       setOpen(false);
       onSuccess();
@@ -110,13 +125,32 @@ export function AddFacilityDialog({ companyId, onSuccess }: AddFacilityDialogPro
 
           <div className="space-y-2">
             <Label htmlFor="address">Адрес</Label>
-            <Input
-              id="address"
-              placeholder="ул. Центральная, д. 1"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="address"
+                placeholder="ул. Центральная, д. 1"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowMapDialog(true)}
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Карта
+              </Button>
+            </div>
           </div>
+
+          <YandexMapDialog
+            open={showMapDialog}
+            onOpenChange={setShowMapDialog}
+            onCoordinatesSelect={handleCoordinatesSelect}
+            initialLat={formData.location_lat}
+            initialLng={formData.location_lng}
+          />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

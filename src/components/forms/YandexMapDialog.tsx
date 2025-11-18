@@ -6,7 +6,7 @@ import { MapPin } from 'lucide-react';
 interface YandexMapDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCoordinatesSelect: (lat: number, lng: number) => void;
+  onCoordinatesSelect: (lat: number, lng: number, address?: string) => void;
   initialLat?: string;
   initialLng?: string;
 }
@@ -28,6 +28,7 @@ export function YandexMapDialog({
   const [map, setMap] = useState<any>(null);
   const [placemark, setPlacemark] = useState<any>(null);
   const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
+  const [address, setAddress] = useState<string>('');
 
   useEffect(() => {
     if (!open) {
@@ -83,16 +84,34 @@ export function YandexMapDialog({
 
         newMap.geoObjects.add(newPlacemark);
 
+        const reverseGeocode = async (coords: [number, number]) => {
+          try {
+            const result = await window.ymaps.geocode(coords);
+            const firstGeoObject = result.geoObjects.get(0);
+            if (firstGeoObject) {
+              const addressText = firstGeoObject.getAddressLine();
+              setAddress(addressText);
+            }
+          } catch (error) {
+            console.error('Reverse geocoding error:', error);
+          }
+        };
+
         newPlacemark.events.add('dragend', function () {
           const coords = newPlacemark.geometry.getCoordinates();
           setSelectedCoords(coords);
+          reverseGeocode(coords);
         });
 
         newMap.events.add('click', function (e: any) {
           const coords = e.get('coords');
           newPlacemark.geometry.setCoordinates(coords);
           setSelectedCoords(coords);
+          reverseGeocode(coords);
         });
+
+        // Получить адрес для начальных координат
+        reverseGeocode([lat, lng]);
 
         // Подгонка размера карты под контейнер
         newMap.container.fitToViewport();
@@ -108,7 +127,7 @@ export function YandexMapDialog({
 
   const handleConfirm = () => {
     if (selectedCoords) {
-      onCoordinatesSelect(selectedCoords[0], selectedCoords[1]);
+      onCoordinatesSelect(selectedCoords[0], selectedCoords[1], address);
       onOpenChange(false);
     }
   };

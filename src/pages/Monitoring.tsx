@@ -17,6 +17,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 import { SensorSettingsDialog } from "@/components/forms/SensorSettingsDialog";
 import { WeatherWidget } from "@/components/WeatherWidget";
+import { PlotWeatherWidget } from "@/components/PlotWeatherWidget";
+import { PlotWeatherDetail } from "@/components/PlotWeatherDetail";
+import { useWeatherData } from "@/hooks/useWeatherData";
 
 interface Plot {
   id: string;
@@ -24,6 +27,8 @@ interface Plot {
   area: number;
   crop: string | null;
   address: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
   status: string;
 }
 
@@ -49,27 +54,6 @@ interface Sensor {
   created_at: string;
 }
 
-const getWeatherForPlot = (plotId: string) => {
-  const weatherVariations = [
-    { current: { temp: 20, condition: "Облачно" }, forecast: [
-      { day: "Сегодня", temp: 20, condition: "Облачно" },
-      { day: "Завтра", temp: 22, condition: "Ясно" },
-      { day: "Послезавтра", temp: 19, condition: "Дождь" }
-    ]},
-    { current: { temp: 18, condition: "Ясно" }, forecast: [
-      { day: "Сегодня", temp: 18, condition: "Ясно" },
-      { day: "Завтра", temp: 19, condition: "Облачно" },
-      { day: "Послезавтра", temp: 21, condition: "Ясно" }
-    ]},
-    { current: { temp: 22, condition: "Дождь" }, forecast: [
-      { day: "Сегодня", temp: 22, condition: "Дождь" },
-      { day: "Завтра", temp: 20, condition: "Облачно" },
-      { day: "Послезавтра", temp: 18, condition: "Пасмурно" }
-    ]}
-  ];
-  const index = plotId ? parseInt(plotId.slice(-1), 16) % weatherVariations.length : 0;
-  return weatherVariations[index];
-};
 
 const chartData = [
   { time: '00:00', moisture: 65, temp: 18, ph: 6.5 },
@@ -498,18 +482,14 @@ export default function Monitoring() {
         {/* Виджеты погоды для каждого участка */}
         {plots.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-            {plots.map((plot) => {
-              const weather = getWeatherForPlot(plot.id);
-              return (
-                <WeatherWidget
-                  key={plot.id}
-                  plotName={`${plot.cadastral_number} - ${plot.crop || 'Без культуры'}`}
-                  currentTemp={weather.current.temp}
-                  currentCondition={weather.current.condition}
-                  forecast={weather.forecast}
-                />
-              );
-            })}
+            {plots.map((plot) => (
+              <PlotWeatherWidget
+                key={plot.id}
+                plotName={`${plot.cadastral_number} - ${plot.crop || 'Без культуры'}`}
+                latitude={plot.location_lat}
+                longitude={plot.location_lng}
+              />
+            ))}
           </div>
         )}
 
@@ -930,52 +910,15 @@ export default function Monitoring() {
 
         <TabsContent value="weather" className="space-y-4">
           <div className="grid gap-4">
-            {plots.map((plot) => {
-              const weather = getWeatherForPlot(plot.id);
-              return (
-                <Card key={plot.id}>
-                  <CardHeader>
-                    <CardTitle>{plot.cadastral_number} - {plot.crop || 'Без культуры'}</CardTitle>
-                    <CardDescription>Погодные условия для участка</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <h4 className="font-semibold mb-3">Текущая погода</h4>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-4">
-                            <Thermometer className="h-6 w-6 text-orange-600" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">Температура</p>
-                              <p className="text-xl font-bold">{weather.current.temp}°C</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Sun className="h-6 w-6 text-yellow-600" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">Условия</p>
-                              <p className="text-lg font-semibold">{weather.current.condition}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-3">Прогноз на 3 дня</h4>
-                        <div className="space-y-2">
-                          {weather.forecast.map((day, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                              <span className="font-medium text-sm">{day.day}</span>
-                              <span className="text-muted-foreground text-sm">{day.condition}</span>
-                              <span className="font-bold">{day.temp}°C</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {plots.map((plot) => (
+              <PlotWeatherDetail
+                key={plot.id}
+                plotName={plot.crop || 'Без культуры'}
+                cadastralNumber={plot.cadastral_number}
+                latitude={plot.location_lat}
+                longitude={plot.location_lng}
+              />
+            ))}
           </div>
         </TabsContent>
 
