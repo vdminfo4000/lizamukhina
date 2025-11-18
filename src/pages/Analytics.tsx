@@ -199,9 +199,7 @@ export default function Analytics() {
                     <TableHead>Спелость</TableHead>
                     <TableHead>Качество</TableHead>
                     <TableHead>Дней до сбора</TableHead>
-                    <TableHead>Погода</TableHead>
                     <TableHead>Влажность почвы</TableHead>
-                    <TableHead>Рекомендация</TableHead>
                     <TableHead className="w-[100px]">Статус</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -242,19 +240,7 @@ export default function Analytics() {
                           {item.daysToHarvest}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <span className={
-                          item.weather === "Благоприятная" ? "text-green-600" :
-                          item.weather.includes("Дождь") ? "text-amber-600" :
-                          "text-muted-foreground"
-                        }>
-                          {item.weather}
-                        </span>
-                      </TableCell>
                       <TableCell>{item.soilMoisture}%</TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <p className="text-sm">{item.recommendation}</p>
-                      </TableCell>
                       <TableCell>
                         {item.status === 'urgent' ? (
                           <Badge variant="destructive" className="gap-1">
@@ -292,8 +278,8 @@ export default function Analytics() {
                 {plots.map((plot, index) => (
                   <div key={plot.id} className="flex items-center justify-between p-4 rounded-lg border">
                     <div className="flex-1">
-                      <h4 className="font-medium">{plot.crop || 'Культура'} ({plot.cadastral_number})</h4>
-                      <p className="text-sm text-muted-foreground">Площадь: {plot.area} га</p>
+                      <h4 className="font-medium">{plot.name || plot.cadastral_number}</h4>
+                      <p className="text-sm text-muted-foreground">{plot.crop || 'Не указано'} • Площадь: {plot.area} га</p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold">{(35 - index * 2).toFixed(1)} ц/га</p>
