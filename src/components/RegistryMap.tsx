@@ -46,10 +46,10 @@ declare global {
 export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
-  const [selectedCrop, setSelectedCrop] = useState<string>("all");
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [clusterer, setClusterer] = useState<any>(null);
 
-  const crops = ["all", ...Array.from(new Set(plots.map(p => p.crop).filter(Boolean))) as string[]];
+  const crops = ["all", "facilities", ...Array.from(new Set(plots.map(p => p.crop).filter(Boolean))) as string[]];
 
   useEffect(() => {
     const loadYandexMaps = () => {
@@ -104,9 +104,15 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
     clusterer.removeAll();
     const placemarks: any[] = [];
 
-    const filteredPlots = selectedCrop === "all" 
-      ? plots.filter(p => p.location_lat && p.location_lng)
-      : plots.filter(p => p.crop === selectedCrop && p.location_lat && p.location_lng);
+    // Filter logic based on selected filter
+    const shouldShowPlots = selectedFilter !== "facilities";
+    const shouldShowFacilities = selectedFilter === "all" || selectedFilter === "facilities";
+
+    const filteredPlots = shouldShowPlots 
+      ? (selectedFilter === "all" 
+          ? plots.filter(p => p.location_lat && p.location_lng)
+          : plots.filter(p => p.crop === selectedFilter && p.location_lat && p.location_lng))
+      : [];
 
     filteredPlots.forEach((plot) => {
       const displayName = plot.name || plot.cadastral_number;
@@ -132,29 +138,31 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
       placemarks.push(placemark);
     });
 
-    // Add facilities
-    facilities.forEach((facility) => {
-      if (facility.location_lat && facility.location_lng) {
-        const placemark = new window.ymaps.Placemark(
-          [facility.location_lat, facility.location_lng],
-          {
-            balloonContentHeader: `<strong>${facility.name}</strong>`,
-            balloonContentBody: `
-              <div style="padding: 8px;">
-                <p><strong>Тип:</strong> ${facility.type}</p>
-                <p><strong>Адрес:</strong> ${facility.address || 'Не указан'}</p>
-                <p><strong>Статус:</strong> ${facility.status || 'Активен'}</p>
-              </div>
-            `,
-            hintContent: facility.name
-          },
-          {
-            preset: 'islands#blueWarehouseIcon'
-          }
-        );
-        placemarks.push(placemark);
-      }
-    });
+    // Add facilities if filter allows
+    if (shouldShowFacilities) {
+      facilities.forEach((facility) => {
+        if (facility.location_lat && facility.location_lng) {
+          const placemark = new window.ymaps.Placemark(
+            [facility.location_lat, facility.location_lng],
+            {
+              balloonContentHeader: `<strong>${facility.name}</strong>`,
+              balloonContentBody: `
+                <div style="padding: 8px;">
+                  <p><strong>Тип:</strong> ${facility.type}</p>
+                  <p><strong>Адрес:</strong> ${facility.address || 'Не указан'}</p>
+                  <p><strong>Статус:</strong> ${facility.status || 'Активен'}</p>
+                </div>
+              `,
+              hintContent: facility.name
+            },
+            {
+              preset: 'islands#blueWarehouseIcon'
+            }
+          );
+          placemarks.push(placemark);
+        }
+      });
+    }
 
     if (placemarks.length > 0) {
       clusterer.add(placemarks);
@@ -163,19 +171,20 @@ export function RegistryMap({ plots, equipment, facilities }: RegistryMapProps) 
         map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
       }
     }
-  }, [map, clusterer, plots, facilities, selectedCrop]);
+  }, [map, clusterer, plots, facilities, selectedFilter]);
 
   return (
     <Card className="mb-6">
       <div className="p-4 flex items-center gap-4 border-b">
         <h3 className="text-lg font-semibold">Карта активов</h3>
-        <Select value={selectedCrop} onValueChange={setSelectedCrop}>
+        <Select value={selectedFilter} onValueChange={setSelectedFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Все культуры" />
+            <SelectValue placeholder="Все" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все культуры</SelectItem>
-            {crops.filter(c => c !== "all").map((crop) => (
+            <SelectItem value="all">Все</SelectItem>
+            <SelectItem value="facilities">Объекты</SelectItem>
+            {crops.filter(c => c !== "all" && c !== "facilities").map((crop) => (
               <SelectItem key={crop} value={crop}>{crop}</SelectItem>
             ))}
           </SelectContent>
