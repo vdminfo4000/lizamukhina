@@ -13,7 +13,7 @@ export const SensorZone = ({ zoneName, sensors }: SensorZoneProps) => {
   return (
     <div className="space-y-2">
       <h4 className="text-sm font-semibold text-muted-foreground">{zoneName}</h4>
-      <div ref={scrollRef} className="flex flex-nowrap gap-2 overflow-x-auto pb-2 w-full min-w-0">
+      <div ref={scrollRef} className="flex flex-nowrap gap-2 overflow-x-auto hide-scrollbar pb-2 w-full min-w-0">
         {sensors.map((sensor: any) => {
           const hasData = sensor.last_reading && typeof sensor.last_reading === 'object' && 'value' in sensor.last_reading;
           const sensorValue = hasData ? sensor.last_reading.value : null;
@@ -34,7 +34,7 @@ export const SensorZone = ({ zoneName, sensors }: SensorZoneProps) => {
           return (
             <Card 
               key={sensor.id} 
-              className={`flex-shrink-0 w-28 border ${isOffline ? 'bg-destructive/10 border-destructive' : 'border-border'}`}
+              className={`flex-shrink-0 w-28 border widget-3d ${isOffline ? 'bg-destructive/10 border-destructive' : 'border-border'}`}
             >
               <CardContent className="p-2">
                 <div className="flex items-center justify-between mb-1">

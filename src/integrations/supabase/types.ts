@@ -423,17 +423,22 @@ export type Database = {
       market_listings: {
         Row: {
           additional_info: string | null
+          category: string | null
           company_id: string
+          contact_info: Json | null
           created_at: string
           crop: string
+          description: string | null
           harvest_year: number | null
           id: string
           inquiries: number
+          listing_type: string | null
           location: string | null
           price: number
           quality: string | null
           quantity: number
           status: string
+          title: string | null
           unit: string
           updated_at: string
           user_id: string
@@ -441,17 +446,22 @@ export type Database = {
         }
         Insert: {
           additional_info?: string | null
+          category?: string | null
           company_id: string
+          contact_info?: Json | null
           created_at?: string
           crop: string
+          description?: string | null
           harvest_year?: number | null
           id?: string
           inquiries?: number
+          listing_type?: string | null
           location?: string | null
           price: number
           quality?: string | null
           quantity: number
           status?: string
+          title?: string | null
           unit?: string
           updated_at?: string
           user_id: string
@@ -459,17 +469,22 @@ export type Database = {
         }
         Update: {
           additional_info?: string | null
+          category?: string | null
           company_id?: string
+          contact_info?: Json | null
           created_at?: string
           crop?: string
+          description?: string | null
           harvest_year?: number | null
           id?: string
           inquiries?: number
+          listing_type?: string | null
           location?: string | null
           price?: number
           quality?: string | null
           quantity?: number
           status?: string
+          title?: string | null
           unit?: string
           updated_at?: string
           user_id?: string

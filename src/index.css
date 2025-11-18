@@ -104,3 +104,56 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 3D card effect */
+  .card-3d {
+    transform: translateZ(0);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.05), 
+                0 2px 4px -2px hsl(var(--primary) / 0.05),
+                0 0 0 1px hsl(var(--border));
+  }
+  
+  .card-3d:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 25px -5px hsl(var(--primary) / 0.15), 
+                0 10px 10px -5px hsl(var(--primary) / 0.1),
+                0 0 0 1px hsl(var(--primary) / 0.2);
+  }
+
+  /* Widget 3D effect */
+  .widget-3d {
+    transform: translateZ(0);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px -1px hsl(var(--primary) / 0.08), 
+                0 1px 2px -1px hsl(var(--primary) / 0.05);
+  }
+  
+  .widget-3d:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px hsl(var(--primary) / 0.12), 
+                0 4px 6px -2px hsl(var(--primary) / 0.08);
+  }
+
+  /* Icon 3D effect */
+  .icon-3d {
+    transition: transform 0.2s ease;
+    filter: drop-shadow(0 2px 4px hsl(var(--primary) / 0.1));
+  }
+  
+  .icon-3d:hover {
+    transform: scale(1.1) translateY(-2px);
+    filter: drop-shadow(0 4px 8px hsl(var(--primary) / 0.2));
+  }
+}
