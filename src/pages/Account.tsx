@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Building2, MapPin } from "lucide-react";
+import { Building2, MapPin, Wallet, Settings, TrendingUp, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -179,13 +179,42 @@ export default function Account() {
         <TabsContent value="modules" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Управление модулями</CardTitle>
-              <CardDescription>Настройка доступных модулей для компании</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Управление модулями</CardTitle>
+                  <CardDescription>Настройка доступных модулей для компании</CardDescription>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-muted-foreground">Счет</p>
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-5 w-5 text-primary" />
+                    <p className="text-2xl font-bold">150 000 ₽</p>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <p>Функция в разработке</p>
-                <p className="text-sm mt-1">Здесь будут настройки активации и деактивации модулей</p>
+              <div className="space-y-3">
+                {[
+                  { icon: TrendingUp, name: "Реестр активов", status: "active" },
+                  { icon: Package, name: "Товарная биржа", status: "active" },
+                  { icon: Settings, name: "Мониторинг урожая", status: "active" },
+                  { icon: Building2, name: "CRM", status: "active" },
+                  { icon: TrendingUp, name: "Аналитика", status: "inactive" },
+                  { icon: Package, name: "Страхование", status: "inactive" },
+                ].map((module, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <module.icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <span className="font-medium">{module.name}</span>
+                    </div>
+                    <Badge variant={module.status === "active" ? "default" : "secondary"}>
+                      {module.status === "active" ? "Активен" : "Активировать"}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

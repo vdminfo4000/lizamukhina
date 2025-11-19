@@ -431,25 +431,25 @@ export default function Monitoring() {
 
       {/* Stats Cards */}
       <Tabs defaultValue="sensors" className="space-y-4">
-        {/* Виджеты погоды для каждого участка */}
-        {plots.length > 0 && (
-          <div ref={weatherScrollRef} className="mb-6 w-full overflow-x-auto hide-scrollbar">
-            <div className="flex flex-nowrap gap-4 pb-4 min-w-0">
-              {plots.map((plot) => (
-                <div key={plot.id} className="flex-shrink-0 w-[280px]">
-                  <div className="widget-3d">
-                    <PlotWeatherWidget
+      {/* Виджеты погоды для каждого участка */}
+      {plots.length > 0 && (
+        <div ref={weatherScrollRef} className="mb-6 w-full overflow-x-auto hide-scrollbar">
+          <div className="flex flex-nowrap gap-2 pb-2 min-w-0">
+            {plots.map((plot) => (
+              <div key={plot.id} className="flex-shrink-0">
+                <div className="widget-3d">
+                  <PlotWeatherWidget
                     plotName={plot.name}
                     cadastralNumber={plot.cadastral_number}
                     latitude={plot.location_lat}
-                      longitude={plot.location_lng}
-                    />
-                  </div>
+                    longitude={plot.location_lng}
+                  />
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
         <TabsList>
           <TabsTrigger value="sensors">Датчики</TabsTrigger>

@@ -216,11 +216,16 @@ export default function Employees() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Управление сотрудниками</h1>
-          <p className="text-muted-foreground mt-2">
-            Добавляйте сотрудников и управляйте их правами доступа
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate('/account')}>
+            Назад
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Управление сотрудниками</h1>
+            <p className="text-muted-foreground mt-2">
+              Добавляйте сотрудников и управляйте их правами доступа
+            </p>
+          </div>
         </div>
         {companyId && (
           <AddEmployeeDialog 
