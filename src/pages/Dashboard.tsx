@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Database, LineChart, Activity, ShoppingCart, Shield, TrendingUp, AlertCircle } from "lucide-react";
+import { Database, LineChart, Activity, ShoppingCart, Shield, TrendingUp, AlertCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +46,14 @@ const modules = [
     href: "/insurance",
     color: "text-red-600",
     bgColor: "bg-red-50",
+  },
+  {
+    title: "Отчетность ГИС",
+    description: "Автоматическое формирование и отправка отчетности",
+    icon: FileText,
+    href: "/gis-reporting",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
   },
 ];
 
