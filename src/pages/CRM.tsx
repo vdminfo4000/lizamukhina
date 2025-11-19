@@ -10,11 +10,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Send, Mail, Users, FileText, Upload, Trash2, User, MessageSquare } from "lucide-react";
+import { Send, Mail, Users, FileText, Upload, Trash2, User, MessageSquare, Settings } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { AddReportDialog } from "@/components/forms/AddReportDialog";
+import { ReportSettingsDialog } from "@/components/forms/ReportSettingsDialog";
+import { ReportFormDialog } from "@/components/forms/ReportFormDialog";
+import { AddPlanDialog } from "@/components/forms/AddPlanDialog";
 
 interface Message {
   id: string;
@@ -99,6 +103,25 @@ export default function CRM() {
     totalDocuments: 0,
     totalContacts: 0,
   });
+
+  const [reports, setReports] = useState<Array<{ id: string; name: string }>>([]);
+  const [addReportOpen, setAddReportOpen] = useState(false);
+  const [reportSettingsOpen, setReportSettingsOpen] = useState(false);
+  const [reportFormOpen, setReportFormOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const [plans, setPlans] = useState<{
+    plots: Array<{ id: string; name: string; description: string }>;
+    equipment: Array<{ id: string; name: string; description: string }>;
+    facilities: Array<{ id: string; name: string; description: string }>;
+  }>({
+    plots: [],
+    equipment: [],
+    facilities: []
+  });
+  const [addPlanOpen, setAddPlanOpen] = useState(false);
+  const [planType, setPlanType] = useState<"plots" | "equipment" | "facilities">("plots");
 
   useEffect(() => {
     loadData();
@@ -196,6 +219,15 @@ export default function CRM() {
     if (!user) return;
 
     setUserId(user.id);
+
+    // Check if user is admin
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+    
+    setIsAdmin(roleData?.role === 'admin');
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -413,6 +445,33 @@ export default function CRM() {
     }
   };
 
+  const handleAddReport = (reportName: string) => {
+    const newReport = {
+      id: Date.now().toString(),
+      name: reportName
+    };
+    setReports([...reports, newReport]);
+    toast({
+      title: "Успешно",
+      description: `Отчет "${reportName}" добавлен`,
+    });
+  };
+
+  const handleAddPlan = (plan: { name: string; description: string }) => {
+    const newPlan = {
+      id: Date.now().toString(),
+      ...plan
+    };
+    setPlans({
+      ...plans,
+      [planType]: [...plans[planType], newPlan]
+    });
+    toast({
+      title: "Успешно",
+      description: `План "${plan.name}" добавлен`,
+    });
+  };
+
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return "0 KB";
     const kb = bytes / 1024;
@@ -466,21 +525,72 @@ export default function CRM() {
                   <CardTitle>Отчеты</CardTitle>
                   <CardDescription>Управление отчетами для сотрудников</CardDescription>
                 </div>
-                {/* Only admins can add reports */}
-                <Button>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Добавить отчет
-                </Button>
+                {isAdmin && (
+                  <Button onClick={() => setAddReportOpen(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Добавить отчет
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Пока нет созданных отчетов</p>
-                <p className="text-sm mt-1">Создайте первый отчет для заполнения сотрудниками</p>
-              </div>
+              {reports.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Пока нет созданных отчетов</p>
+                  <p className="text-sm mt-1">Создайте первый отчет для заполнения сотрудниками</p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {reports.map((report) => (
+                    <div key={report.id} className="flex items-center gap-2 p-3 border rounded-lg">
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedReport(report.name);
+                            setReportSettingsOpen(true);
+                          }}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="default"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedReport(report.name);
+                          setReportFormOpen(true);
+                        }}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        {report.name}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          <AddReportDialog
+            open={addReportOpen}
+            onOpenChange={setAddReportOpen}
+            onAdd={handleAddReport}
+          />
+
+          <ReportSettingsDialog
+            open={reportSettingsOpen}
+            onOpenChange={setReportSettingsOpen}
+            reportName={selectedReport}
+          />
+
+          <ReportFormDialog
+            open={reportFormOpen}
+            onOpenChange={setReportFormOpen}
+            reportName={selectedReport}
+          />
         </TabsContent>
 
         {/* Planning Tab */}
@@ -495,14 +605,36 @@ export default function CRM() {
             <TabsContent value="plots">
               <Card>
                 <CardHeader>
-                  <CardTitle>Планирование по участкам</CardTitle>
-                  <CardDescription>Планы по посеву и сбору урожая</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Планирование по участкам</CardTitle>
+                      <CardDescription>Планы по посеву и сбору урожая</CardDescription>
+                    </div>
+                    <Button onClick={() => {
+                      setPlanType("plots");
+                      setAddPlanOpen(true);
+                    }}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Добавить план
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Планирование работ на участках</p>
-                  </div>
+                  {plans.plots.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Планирование работ на участках</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2">
+                      {plans.plots.map((plan) => (
+                        <Button key={plan.id} variant="outline" className="w-full justify-start">
+                          <FileText className="mr-2 h-4 w-4" />
+                          {plan.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -510,14 +642,36 @@ export default function CRM() {
             <TabsContent value="equipment">
               <Card>
                 <CardHeader>
-                  <CardTitle>Планирование работы техники</CardTitle>
-                  <CardDescription>График использования техники</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Планирование работы техники</CardTitle>
+                      <CardDescription>График использования техники</CardDescription>
+                    </div>
+                    <Button onClick={() => {
+                      setPlanType("equipment");
+                      setAddPlanOpen(true);
+                    }}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Добавить план
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Планирование работы техники</p>
-                  </div>
+                  {plans.equipment.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Планирование работы техники</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2">
+                      {plans.equipment.map((plan) => (
+                        <Button key={plan.id} variant="outline" className="w-full justify-start">
+                          <FileText className="mr-2 h-4 w-4" />
+                          {plan.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -525,18 +679,47 @@ export default function CRM() {
             <TabsContent value="facilities">
               <Card>
                 <CardHeader>
-                  <CardTitle>Планирование загрузки объектов</CardTitle>
-                  <CardDescription>Загрузка и выгрузка урожая на объектах</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Планирование загрузки объектов</CardTitle>
+                      <CardDescription>Загрузка и выгрузка урожая на объектах</CardDescription>
+                    </div>
+                    <Button onClick={() => {
+                      setPlanType("facilities");
+                      setAddPlanOpen(true);
+                    }}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Добавить план
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Планирование работы объектов</p>
-                  </div>
+                  {plans.facilities.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Планирование работы объектов</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2">
+                      {plans.facilities.map((plan) => (
+                        <Button key={plan.id} variant="outline" className="w-full justify-start">
+                          <FileText className="mr-2 h-4 w-4" />
+                          {plan.name}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
+
+          <AddPlanDialog
+            open={addPlanOpen}
+            onOpenChange={setAddPlanOpen}
+            planType={planType}
+            onAdd={handleAddPlan}
+          />
         </TabsContent>
 
         <TabsContent value="chat">
