@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import CRM from "./pages/CRM";
+import GISReporting from "./pages/GISReporting";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <CRM />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/gis-reporting" element={
+              <ProtectedRoute>
+                <Layout>
+                  <GISReporting />
                 </Layout>
               </ProtectedRoute>
             } />

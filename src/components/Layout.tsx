@@ -14,6 +14,7 @@ import {
   HelpCircle,
   LogOut,
   Users,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +32,7 @@ const navigation = [
   { name: "Товарная биржа", href: "/exchange", icon: ShoppingCart },
   { name: "Страхование", href: "/insurance", icon: Shield },
   { name: "CRM", href: "/crm", icon: Users },
+  { name: "Отчетность ГИС", href: "/gis-reporting", icon: FileText },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -50,6 +52,7 @@ export default function Layout({ children }: LayoutProps) {
     "/exchange": "exchange",
     "/insurance": "insurance",
     "/crm": "crm",
+    "/gis-reporting": "gis_reporting",
   };
 
   useEffect(() => {

@@ -336,9 +336,9 @@ export default function Exchange() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs defaultValue="my" className="space-y-4">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="all">Все объявления</TabsTrigger>
+          <TabsTrigger value="my">Мои объявления</TabsTrigger>
           <TabsTrigger value="crops">С/Х Продукция</TabsTrigger>
           <TabsTrigger value="equipment">Техника</TabsTrigger>
           <TabsTrigger value="transport">Грузоперевозки</TabsTrigger>
@@ -346,13 +346,13 @@ export default function Exchange() {
           <TabsTrigger value="operators">Операторы</TabsTrigger>
         </TabsList>
 
-        {/* All Listings Tab */}
-        <TabsContent value="all" className="space-y-4">
+        {/* My Listings Tab */}
+        <TabsContent value="my" className="space-y-4">
           <div className="flex gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Поиск объявлений..."
+                placeholder="Поиск моих объявлений..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -360,12 +360,15 @@ export default function Exchange() {
             </div>
             <Button onClick={() => window.location.hash = '#create'}>
               <Plus className="mr-2 h-4 w-4" />
-              Подать объявление
+              Добавить объявление
             </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {filteredListings.map((listing) => {
+            {myListings.filter(listing =>
+              listing.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              listing.description?.toLowerCase().includes(searchQuery.toLowerCase())
+            ).map((listing) => {
               const CategoryIcon = getCategoryIcon(listing.category);
               return (
                 <Card key={listing.id} className="card-3d">
@@ -441,6 +444,13 @@ export default function Exchange() {
                   className="pl-10"
                 />
               </div>
+              <Button onClick={() => {
+                setNewListing({ ...newListing, category: category });
+                window.location.hash = '#create';
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить объявление
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -170,10 +170,26 @@ export default function Account() {
       </Card>
 
       <Tabs defaultValue="company" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="company">Компания</TabsTrigger>
+          <TabsTrigger value="modules" disabled={!isAdmin}>Управление модулями</TabsTrigger>
           <TabsTrigger value="employees" onClick={() => navigate('/employees')}>Сотрудники</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="modules" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Управление модулями</CardTitle>
+              <CardDescription>Настройка доступных модулей для компании</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Функция в разработке</p>
+                <p className="text-sm mt-1">Здесь будут настройки активации и деактивации модулей</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="company" className="space-y-4">
           <Card>

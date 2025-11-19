@@ -429,8 +429,16 @@ export default function CRM() {
         </p>
       </div>
 
-      <Tabs defaultValue="chat" className="space-y-4">
+      <Tabs defaultValue="reports" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="reports">
+            <FileText className="w-4 h-4 mr-2" />
+            Отчеты
+          </TabsTrigger>
+          <TabsTrigger value="planning">
+            <FileText className="w-4 h-4 mr-2" />
+            Планирование
+          </TabsTrigger>
           <TabsTrigger value="chat">
             <MessageSquare className="w-4 h-4 mr-2" />
             Чат
@@ -448,6 +456,88 @@ export default function CRM() {
             Контакты
           </TabsTrigger>
         </TabsList>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Отчеты</CardTitle>
+                  <CardDescription>Управление отчетами для сотрудников</CardDescription>
+                </div>
+                {/* Only admins can add reports */}
+                <Button>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Добавить отчет
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>Пока нет созданных отчетов</p>
+                <p className="text-sm mt-1">Создайте первый отчет для заполнения сотрудниками</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Planning Tab */}
+        <TabsContent value="planning" className="space-y-4">
+          <Tabs defaultValue="plots" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="plots">Участки</TabsTrigger>
+              <TabsTrigger value="equipment">Техника</TabsTrigger>
+              <TabsTrigger value="facilities">Объекты</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="plots">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Планирование по участкам</CardTitle>
+                  <CardDescription>Планы по посеву и сбору урожая</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Планирование работ на участках</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="equipment">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Планирование работы техники</CardTitle>
+                  <CardDescription>График использования техники</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Планирование работы техники</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="facilities">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Планирование загрузки объектов</CardTitle>
+                  <CardDescription>Загрузка и выгрузка урожая на объектах</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Планирование работы объектов</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
 
         <TabsContent value="chat">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
