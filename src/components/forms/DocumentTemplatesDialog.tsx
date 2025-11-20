@@ -297,27 +297,43 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         console.error('Docxtemplater template error:', renderError);
 
         const templateErrors = renderError?.properties?.errors as any[] | undefined;
+        let detailedMessage = "";
+
         if (templateErrors && templateErrors.length > 0) {
           const messages = templateErrors
-            .map((e) => e?.value?.properties?.explanation || e?.value?.properties?.message || e?.value?.message || e?.properties?.explanation || e?.properties?.message || e?.message)
+            .map(
+              (e) =>
+                e?.properties?.explanation ||
+                e?.properties?.message ||
+                e?.message
+            )
             .filter(Boolean)
-            .join('\n');
+            .join("\n");
 
-          toast({
-            title: "Ошибка в шаблоне документа",
-            description:
-              messages ||
-              "Проверьте корректность меток {{...}} в шаблоне. Метки не должны пересекаться, дублироваться или содержать форматирование внутри.",
-            variant: "destructive",
-          });
+          detailedMessage = messages;
         } else {
-          toast({
-            title: "Ошибка в шаблоне документа",
-            description:
-              "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.",
-            variant: "destructive",
-          });
+          const contextTag = renderError?.properties?.context?.tag as string | undefined;
+          const explanation = renderError?.properties?.explanation as string | undefined;
+          const errorId = renderError?.properties?.id as string | undefined;
+          const baseMessage = renderError?.message as string | undefined;
+
+          detailedMessage =
+            explanation ||
+            (contextTag
+              ? `Проблемный тег: ${contextTag}. Проверьте его написание и отсутствие скрытого форматирования.`
+              : "") ||
+            (errorId ? `Код ошибки: ${errorId}` : "") ||
+            baseMessage ||
+            "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.";
         }
+
+        toast({
+          title: "Ошибка в шаблоне документа",
+          description:
+            detailedMessage ||
+            "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.",
+          variant: "destructive",
+        });
 
         setIsProcessing(false);
         return;
