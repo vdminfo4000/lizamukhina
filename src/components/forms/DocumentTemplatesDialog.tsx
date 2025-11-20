@@ -282,23 +282,24 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
       // Convert blob to arrayBuffer
       const arrayBuffer = await fileData.arrayBuffer();
 
-      // Load the template
-      const zip = new PizZip(arrayBuffer);
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-      });
-
-      // Set the data with detailed template error handling
+      // Load and prepare the template with detailed error handling
+      let doc: Docxtemplater;
       try {
+        const zip = new PizZip(arrayBuffer);
+        doc = new Docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+        });
+
+        // Set the data
         doc.render(formData);
       } catch (renderError: any) {
-        console.error('Docxtemplater render error:', renderError);
+        console.error('Docxtemplater template error:', renderError);
 
         const templateErrors = renderError?.properties?.errors as any[] | undefined;
         if (templateErrors && templateErrors.length > 0) {
           const messages = templateErrors
-            .map((e) => e?.properties?.explanation || e?.properties?.message || e?.message)
+            .map((e) => e?.value?.properties?.explanation || e?.value?.properties?.message || e?.value?.message || e?.properties?.explanation || e?.properties?.message || e?.message)
             .filter(Boolean)
             .join('\n');
 
@@ -321,6 +322,7 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         setIsProcessing(false);
         return;
       }
+
 
       // Generate the document
       const blob = doc.getZip().generate({
