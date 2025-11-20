@@ -287,6 +287,42 @@ export type Database = {
         }
         Relationships: []
       }
+      document_templates: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string | null
+          created_by: string
+          id: string
+          name: string
+          template_type: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          name: string
+          template_type: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          name?: string
+          template_type?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       equipment: {
         Row: {
           company_id: string
@@ -634,6 +670,51 @@ export type Database = {
         }
         Relationships: []
       }
+      plans: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          details: Json | null
+          end_date: string | null
+          id: string
+          name: string
+          plan_type: string
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          details?: Json | null
+          end_date?: string | null
+          id?: string
+          name: string
+          plan_type: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          details?: Json | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          plan_type?: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       plots: {
         Row: {
           address: string | null
@@ -739,6 +820,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reports: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string
+          fields: Json | null
+          id: string
+          name: string
+          template_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          fields?: Json | null
+          id?: string
+          name: string
+          template_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          fields?: Json | null
+          id?: string
+          name?: string
+          template_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       user_permissions: {
         Row: {
