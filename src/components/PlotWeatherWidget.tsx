@@ -16,7 +16,7 @@ export function PlotWeatherWidget({ plotName, cadastralNumber, latitude, longitu
 
   if (loading || !weatherData) {
     return (
-      <div className="h-[200px] w-full min-w-[280px]">
+      <div className="h-[100px] w-full min-w-[280px]">
         <Skeleton className="h-full w-full" />
       </div>
     );

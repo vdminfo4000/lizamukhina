@@ -1234,7 +1234,7 @@ export default function CRM() {
           open={templatesOpen} 
           onOpenChange={setTemplatesOpen} 
           companyId={companyId} 
-          userId={userId} 
+          userId={userId}
         />
       )}
     </div>
