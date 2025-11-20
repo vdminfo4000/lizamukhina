@@ -19,6 +19,7 @@ import { AddReportDialog } from "@/components/forms/AddReportDialog";
 import { ReportSettingsDialog } from "@/components/forms/ReportSettingsDialog";
 import { ReportFormDialog } from "@/components/forms/ReportFormDialog";
 import { AddPlanDialog } from "@/components/forms/AddPlanDialog";
+import { DocumentTemplatesDialog } from "@/components/forms/DocumentTemplatesDialog";
 
 interface Message {
   id: string;
@@ -104,17 +105,18 @@ export default function CRM() {
     totalContacts: 0,
   });
 
-  const [reports, setReports] = useState<Array<{ id: string; name: string }>>([]);
+  const [reports, setReports] = useState<Array<{ id: string; name: string; template_url?: string; fields?: any }>>([]);
   const [addReportOpen, setAddReportOpen] = useState(false);
   const [reportSettingsOpen, setReportSettingsOpen] = useState(false);
   const [reportFormOpen, setReportFormOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const [plans, setPlans] = useState<{
-    plots: Array<{ id: string; name: string; description: string }>;
-    equipment: Array<{ id: string; name: string; description: string }>;
-    facilities: Array<{ id: string; name: string; description: string }>;
+    plots: Array<{ id: string; name: string; description?: string }>;
+    equipment: Array<{ id: string; name: string; description?: string }>;
+    facilities: Array<{ id: string; name: string; description?: string }>;
   }>({
     plots: [],
     equipment: [],
@@ -248,6 +250,33 @@ export default function CRM() {
       .neq("id", user.id);
 
     if (employeesData) setEmployees(employeesData);
+
+    // Load reports
+    const { data: reportsData } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false });
+    
+    if (reportsData) {
+      setReports(reportsData.map(r => ({ id: r.id, name: r.name, template_url: r.template_url, fields: r.fields })));
+    }
+
+    // Load plans
+    const { data: plansData } = await supabase
+      .from('plans')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .order('created_at', { ascending: false });
+    
+    if (plansData) {
+      const groupedPlans = {
+        plots: plansData.filter(p => p.plan_type === 'plot').map(p => ({ id: p.id, name: p.name, description: p.description })),
+        equipment: plansData.filter(p => p.plan_type === 'equipment').map(p => ({ id: p.id, name: p.name, description: p.description })),
+        facilities: plansData.filter(p => p.plan_type === 'facility').map(p => ({ id: p.id, name: p.name, description: p.description })),
+      };
+      setPlans(groupedPlans);
+    }
 
     loadMessages(profile.company_id);
     loadEmails(profile.company_id);
@@ -976,7 +1005,13 @@ export default function CRM() {
               <CardDescription>Хранение и обмен документами</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
+              <div className="flex gap-2 mb-4">
+                {isAdmin && companyId && userId && (
+                  <Button variant="outline" onClick={() => setTemplatesOpen(true)}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Шаблоны
+                  </Button>
+                )}
                 <Button onClick={() => document.getElementById('file-upload')?.click()} disabled={uploadingFile}>
                   <Upload className="w-4 h-4 mr-2" />
                   {uploadingFile ? 'Загрузка...' : 'Загрузить документ'}
@@ -1171,6 +1206,37 @@ export default function CRM() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <AddReportDialog 
+        open={addReportOpen} 
+        onOpenChange={setAddReportOpen} 
+        onAdd={handleAddReport} 
+      />
+      <ReportSettingsDialog 
+        open={reportSettingsOpen} 
+        onOpenChange={setReportSettingsOpen} 
+        reportName={selectedReport} 
+      />
+      <ReportFormDialog 
+        open={reportFormOpen} 
+        onOpenChange={setReportFormOpen} 
+        reportName={selectedReport} 
+      />
+      <AddPlanDialog 
+        open={addPlanOpen} 
+        onOpenChange={setAddPlanOpen} 
+        onAdd={handleAddPlan} 
+        planType={planType} 
+      />
+      {isAdmin && companyId && userId && (
+        <DocumentTemplatesDialog 
+          open={templatesOpen} 
+          onOpenChange={setTemplatesOpen} 
+          companyId={companyId} 
+          userId={userId} 
+        />
+      )}
     </div>
   );
 }
