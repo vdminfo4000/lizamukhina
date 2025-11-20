@@ -111,23 +111,30 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         try {
           const content = e.target?.result;
           const zip = new PizZip(content);
-          const doc = new Docxtemplater(zip, {
-            paragraphLoop: true,
-            linebreaks: true,
-          });
+          
+          // Extract text directly from XML without docxtemplater to avoid formatting issues
+          const xml = zip.file("word/document.xml")?.asText();
+          if (!xml) {
+            throw new Error("Не удалось прочитать содержимое документа");
+          }
 
-          const variables = new Set<string>();
-          const text = doc.getFullText();
+          // Remove all XML tags to get plain text
+          const plainText = xml.replace(/<[^>]*>/g, '');
           
           // Extract variables in format {{variable}}
+          const variables = new Set<string>();
           const regex = /\{\{([^}]+)\}\}/g;
           let match;
-          while ((match = regex.exec(text)) !== null) {
-            variables.add(match[1].trim());
+          while ((match = regex.exec(plainText)) !== null) {
+            const varName = match[1].trim();
+            if (varName) {
+              variables.add(varName);
+            }
           }
 
           resolve(Array.from(variables));
         } catch (error) {
+          console.error('Error extracting variables:', error);
           reject(error);
         }
       };
@@ -150,7 +157,19 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
 
     try {
       // Extract variables from the DOCX file
-      const variables = await extractVariablesFromDocx(uploadFile);
+      let variables: string[] = [];
+      try {
+        variables = await extractVariablesFromDocx(uploadFile);
+      } catch (extractError) {
+        console.error('Error extracting variables:', extractError);
+        toast({
+          title: "Предупреждение",
+          description: "Не удалось извлечь переменные из документа. Убедитесь, что метки {{переменная}} написаны без форматирования (одним стилем, без жирного/курсива внутри тега).",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
 
       // Upload file to storage
       const fileName = `${companyId}/${Date.now()}_${uploadFile.name}`;
@@ -388,7 +407,9 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
                   <CardHeader>
                     <CardTitle className="text-lg">Загрузка шаблона</CardTitle>
                     <CardDescription>
-                      Используйте метки формата {`{{название_поля}}`} в документе Word
+                      Используйте метки формата {`{{название_поля}}`} в документе Word. 
+                      <br />
+                      <strong>Важно:</strong> Метки должны быть написаны одним стилем, без форматирования внутри (не разбивайте тег на части жирным шрифтом или курсивом).
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
