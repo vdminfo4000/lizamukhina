@@ -289,8 +289,38 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         linebreaks: true,
       });
 
-      // Set the data
-      doc.render(formData);
+      // Set the data with detailed template error handling
+      try {
+        doc.render(formData);
+      } catch (renderError: any) {
+        console.error('Docxtemplater render error:', renderError);
+
+        const templateErrors = renderError?.properties?.errors as any[] | undefined;
+        if (templateErrors && templateErrors.length > 0) {
+          const messages = templateErrors
+            .map((e) => e?.properties?.explanation || e?.properties?.message || e?.message)
+            .filter(Boolean)
+            .join('\n');
+
+          toast({
+            title: "Ошибка в шаблоне документа",
+            description:
+              messages ||
+              "Проверьте корректность меток {{...}} в шаблоне. Метки не должны пересекаться, дублироваться или содержать форматирование внутри.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Ошибка в шаблоне документа",
+            description:
+              "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.",
+            variant: "destructive",
+          });
+        }
+
+        setIsProcessing(false);
+        return;
+      }
 
       // Generate the document
       const blob = doc.getZip().generate({
