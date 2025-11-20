@@ -269,9 +269,18 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
     setIsProcessing(true);
 
     try {
-      // Download the template file
-      const response = await fetch(selectedTemplate.file_url);
-      const arrayBuffer = await response.arrayBuffer();
+      // Download the template file from Supabase Storage
+      const templateFileName = selectedTemplate.file_url.split('/').pop();
+      if (!templateFileName) throw new Error("Invalid file URL");
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('document-templates')
+        .download(`${companyId}/${templateFileName}`);
+
+      if (downloadError || !fileData) throw downloadError || new Error("Failed to download template");
+
+      // Convert blob to arrayBuffer
+      const arrayBuffer = await fileData.arrayBuffer();
 
       // Load the template
       const zip = new PizZip(arrayBuffer);
