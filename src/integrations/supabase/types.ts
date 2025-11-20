@@ -293,7 +293,9 @@ export type Database = {
           content: string
           created_at: string | null
           created_by: string
+          file_url: string | null
           id: string
+          is_file_template: boolean | null
           name: string
           template_type: string
           updated_at: string | null
@@ -304,7 +306,9 @@ export type Database = {
           content: string
           created_at?: string | null
           created_by: string
+          file_url?: string | null
           id?: string
+          is_file_template?: boolean | null
           name: string
           template_type: string
           updated_at?: string | null
@@ -315,7 +319,9 @@ export type Database = {
           content?: string
           created_at?: string | null
           created_by?: string
+          file_url?: string | null
           id?: string
+          is_file_template?: boolean | null
           name?: string
           template_type?: string
           updated_at?: string | null
@@ -413,6 +419,60 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_documents: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string
+          created_by_name: string
+          file_name: string
+          file_url: string
+          filled_data: Json | null
+          id: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          created_by_name: string
+          file_name: string
+          file_url: string
+          filled_data?: Json | null
+          id?: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          created_by_name?: string
+          file_name?: string
+          file_url?: string
+          filled_data?: Json | null
+          id?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
         ]

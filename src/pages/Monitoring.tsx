@@ -436,8 +436,9 @@ export default function Monitoring() {
             <h3 className="text-sm font-semibold mb-3 text-foreground">Погода на участках</h3>
             <div 
               ref={weatherScrollRef}
-              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide cursor-grab active:cursor-grabbing"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', userSelect: 'none' }}
+              onMouseDown={(e) => e.preventDefault()}
             >
               {plots.map((plot) => (
                 plot.location_lat && plot.location_lng && (
