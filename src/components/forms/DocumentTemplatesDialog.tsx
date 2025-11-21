@@ -281,13 +281,8 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         throw downloadError || new Error("Не удалось скачать файл шаблона");
       }
 
-      // Преобразуем blob в бинарную строку, как ожидает Docxtemplater
+      // Получаем ArrayBuffer из blob и создаём ZIP напрямую из бинарных данных
       const arrayBuffer = await fileData.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      let binary = "";
-      for (let i = 0; i < uint8Array.length; i++) {
-        binary += String.fromCharCode(uint8Array[i]);
-      }
 
       // Подготовка данных: заменяем null/undefined на пустые строки
       const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
@@ -296,7 +291,7 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
       }, {} as Record<string, string>);
 
       // Создаём документ через Docxtemplater (он гарантирует корректный DOCX-формат)
-      const zip = new PizZip(binary);
+      const zip = new PizZip(arrayBuffer as any);
       let doc: Docxtemplater;
 
       try {
