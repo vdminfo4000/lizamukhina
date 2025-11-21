@@ -289,6 +289,11 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         doc = new Docxtemplater(zip, {
           paragraphLoop: true,
           linebreaks: true,
+          // Разрешаем Docxtemplater автоматически обрабатывать незакрытые/разбитые форматированием теги
+          syntax: {
+            allowUnopenedTag: true,
+            allowUnclosedTag: true,
+          },
         });
 
         // Set the data
