@@ -282,44 +282,47 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
       // Convert blob to arrayBuffer
       const arrayBuffer = await fileData.arrayBuffer();
 
-      // Load and prepare the template with detailed error handling
-      let doc: Docxtemplater;
-      try {
-        const createDoc = (tolerant: boolean) => {
-          const zip = new PizZip(arrayBuffer);
-          return new Docxtemplater(zip, {
-            paragraphLoop: true,
-            linebreaks: true,
-            // Безопасная обработка отсутствующих значений
-            nullGetter(part) {
-              if (!part.module) {
-                return ""; // Заменяем пустые значения на пустую строку
-              }
-              if (part.module === "rawxml") {
-                return ""; // Для rawxml тоже возвращаем пустую строку
-              }
-              return "";
-            },
-            ...(tolerant
-              ? {
-                  // Более терпимая обработка разорванных/незакрытых тегов
-                  syntax: {
-                    allowUnopenedTag: true,
-                    allowUnclosedTag: true,
-                  },
-                }
-              : {}),
-          });
-        };
+      // Подготовка данных: заменяем null/undefined на пустые строки
+      const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
+        acc[key] = value == null ? "" : String(value);
+        return acc;
+      }, {} as Record<string, string>);
 
-        // Очищаем данные: заменяем null/undefined на пустые строки
-        const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
-          acc[key] = value == null ? "" : String(value);
-          return acc;
-        }, {} as Record<string, string>);
+      // Load and prepare the template with detailed error handling
+      let doc: Docxtemplater | null = null;
+      let templateErrorMessage = "";
+
+      const createDoc = (buffer: ArrayBuffer, tolerant: boolean) => {
+        const zip = new PizZip(buffer);
+        return new Docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+          // Безопасная обработка отсутствующих значений
+          nullGetter(part) {
+            if (!part.module) {
+              return ""; // Заменяем пустые значения на пустую строку
+            }
+            if (part.module === "rawxml") {
+              return ""; // Для rawxml тоже возвращаем пустую строку
+            }
+            return "";
+          },
+          ...(tolerant
+            ? {
+                // Более терпимая обработка разорванных/незакрытых тегов
+                syntax: {
+                  allowUnopenedTag: true,
+                  allowUnclosedTag: true,
+                },
+              }
+            : {}),
+        });
+      };
+
+      try {
 
         // Первая попытка: строгий режим
-        doc = createDoc(false);
+        doc = createDoc(arrayBuffer, false);
         try {
           doc.render(cleanedData);
         } catch (innerError: any) {
@@ -335,27 +338,75 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
           }
 
           // Вторая попытка: терпимый режим для проблемных/дублирующих тегов
-          console.warn("Retrying Docxtemplater render in tolerant mode due to tag structure error", {
-            errorId,
-            message,
-          });
-          doc = createDoc(true);
+          console.warn(
+            "Retrying Docxtemplater render in tolerant mode due to tag structure error",
+            {
+              errorId,
+              message,
+            },
+          );
+          doc = createDoc(arrayBuffer, true);
           doc.render(cleanedData);
         }
       } catch (renderError: any) {
-        console.error('Docxtemplater template error:', renderError);
+        console.error("Docxtemplater template error:", renderError);
 
-        const templateErrors = renderError?.properties?.errors as any[] | undefined;
+        const escapeRegExp = (text: string) =>
+          text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+        const removeInvalidTagsFromTemplate = (buffer: ArrayBuffer, xtags: string[]) => {
+          try {
+            const zip = new PizZip(buffer);
+            const fileNames = Object.keys(zip.files).filter((name) => name.endsWith(".xml"));
+
+            fileNames.forEach((name) => {
+              const file = zip.files[name];
+              if (!file || file.dir) return;
+
+              let content = file.asText();
+              xtags.forEach((tag) => {
+                if (!tag) return;
+                const pattern = new RegExp(escapeRegExp(tag), "g");
+                content = content.replace(pattern, "");
+              });
+
+              zip.file(name, content);
+            });
+
+            return zip.generate({ type: "arraybuffer" });
+          } catch (e) {
+            console.error("Failed to auto-repair template XML", e);
+            return null;
+          }
+        };
+
+        const templateErrorsRaw = renderError?.properties?.errors as any[] | undefined;
+
         let detailedMessage = "";
+        let problemTags: string[] = [];
 
-        if (templateErrors && templateErrors.length > 0) {
-          const messages = templateErrors
-            .map(
-              (e) =>
-                e?.properties?.explanation ||
-                e?.properties?.message ||
-                e?.message
-            )
+        if (templateErrorsRaw && templateErrorsRaw.length > 0) {
+          problemTags = templateErrorsRaw
+            .map((e) => {
+              const err = (e as any)?.properties ? e : (e as any)?.value;
+              const id = err?.properties?.id as string | undefined;
+              const xtag = err?.properties?.xtag as string | undefined;
+              if (id === "duplicate_open_tag" || id === "duplicate_close_tag") {
+                return xtag;
+              }
+              return undefined;
+            })
+            .filter((t): t is string => !!t);
+
+          const messages = templateErrorsRaw
+            .map((e) => {
+              const err = (e as any)?.properties ? e : (e as any)?.value;
+              return (
+                err?.properties?.explanation ||
+                err?.properties?.message ||
+                err?.message
+              );
+            })
             .filter(Boolean)
             .join("\n");
 
@@ -376,10 +427,33 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
             "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.";
         }
 
+        // Попытка автоисправления для дублирующихся/битых тегов
+        if (problemTags.length > 0) {
+          console.warn("Attempting auto-repair of template for tags", problemTags);
+          const repairedBuffer = removeInvalidTagsFromTemplate(arrayBuffer, problemTags);
+          if (repairedBuffer) {
+            try {
+              const repairedDoc = createDoc(repairedBuffer, true);
+              repairedDoc.render(cleanedData);
+              doc = repairedDoc;
+              console.info("Template auto-repair succeeded, continuing generation");
+              detailedMessage = "";
+            } catch (repairError) {
+              console.error("Auto-repair of template failed", repairError);
+            }
+          }
+        }
+
+        if (!doc) {
+          templateErrorMessage = detailedMessage;
+        }
+      }
+
+      if (!doc) {
         toast({
           title: "Ошибка в шаблоне документа",
           description:
-            detailedMessage ||
+            templateErrorMessage ||
             "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.",
           variant: "destructive",
         });
@@ -387,7 +461,6 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         setIsProcessing(false);
         return;
       }
-
 
       // Generate the document
       const blob = doc.getZip().generate({
