@@ -289,15 +289,26 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         doc = new Docxtemplater(zip, {
           paragraphLoop: true,
           linebreaks: true,
-          // Разрешаем Docxtemplater автоматически обрабатывать незакрытые/разбитые форматированием теги
-          syntax: {
-            allowUnopenedTag: true,
-            allowUnclosedTag: true,
+          // Безопасная обработка отсутствующих значений
+          nullGetter(part) {
+            if (!part.module) {
+              return ""; // Заменяем пустые значения на пустую строку
+            }
+            if (part.module === "rawxml") {
+              return ""; // Для rawxml тоже возвращаем пустую строку
+            }
+            return "";
           },
         });
 
+        // Очищаем данные: заменяем null/undefined на пустые строки
+        const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
+          acc[key] = value == null ? "" : String(value);
+          return acc;
+        }, {} as Record<string, string>);
+
         // Set the data
-        doc.render(formData);
+        doc.render(cleanedData);
       } catch (renderError: any) {
         console.error('Docxtemplater template error:', renderError);
 
