@@ -15,10 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AddReportDialog } from "@/components/forms/AddReportDialog";
-import { ReportSettingsDialog } from "@/components/forms/ReportSettingsDialog";
-import { ReportFormDialog } from "@/components/forms/ReportFormDialog";
-import { AddPlanDialog } from "@/components/forms/AddPlanDialog";
 import { DocumentTemplatesDialog } from "@/components/forms/DocumentTemplatesDialog";
 import { TemplateButton } from "@/components/forms/TemplateButton";
 
@@ -129,25 +125,8 @@ export default function CRM() {
     totalContacts: 0,
   });
 
-  const [reports, setReports] = useState<Array<{ id: string; name: string; template_url?: string; fields?: any }>>([]);
-  const [addReportOpen, setAddReportOpen] = useState(false);
-  const [reportSettingsOpen, setReportSettingsOpen] = useState(false);
-  const [reportFormOpen, setReportFormOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
-
-  const [plans, setPlans] = useState<{
-    plots: Array<{ id: string; name: string; description?: string }>;
-    equipment: Array<{ id: string; name: string; description?: string }>;
-    facilities: Array<{ id: string; name: string; description?: string }>;
-  }>({
-    plots: [],
-    equipment: [],
-    facilities: []
-  });
-  const [addPlanOpen, setAddPlanOpen] = useState(false);
-  const [planType, setPlanType] = useState<"plots" | "equipment" | "facilities">("plots");
 
   useEffect(() => {
     loadData();
@@ -274,33 +253,6 @@ export default function CRM() {
       .neq("id", user.id);
 
     if (employeesData) setEmployees(employeesData);
-
-    // Load reports
-    const { data: reportsData } = await supabase
-      .from('reports')
-      .select('*')
-      .eq('company_id', profile.company_id)
-      .order('created_at', { ascending: false });
-    
-    if (reportsData) {
-      setReports(reportsData.map(r => ({ id: r.id, name: r.name, template_url: r.template_url, fields: r.fields })));
-    }
-
-    // Load plans
-    const { data: plansData } = await supabase
-      .from('plans')
-      .select('*')
-      .eq('company_id', profile.company_id)
-      .order('created_at', { ascending: false });
-    
-    if (plansData) {
-      const groupedPlans = {
-        plots: plansData.filter(p => p.plan_type === 'plot').map(p => ({ id: p.id, name: p.name, description: p.description })),
-        equipment: plansData.filter(p => p.plan_type === 'equipment').map(p => ({ id: p.id, name: p.name, description: p.description })),
-        facilities: plansData.filter(p => p.plan_type === 'facility').map(p => ({ id: p.id, name: p.name, description: p.description })),
-      };
-      setPlans(groupedPlans);
-    }
 
     loadMessages(profile.company_id);
     loadEmails(profile.company_id);
@@ -530,33 +482,6 @@ export default function CRM() {
     }
   };
 
-  const handleAddReport = (reportName: string) => {
-    const newReport = {
-      id: Date.now().toString(),
-      name: reportName
-    };
-    setReports([...reports, newReport]);
-    toast({
-      title: "Успешно",
-      description: `Отчет "${reportName}" добавлен`,
-    });
-  };
-
-  const handleAddPlan = (plan: { name: string; description: string }) => {
-    const newPlan = {
-      id: Date.now().toString(),
-      ...plan
-    };
-    setPlans({
-      ...plans,
-      [planType]: [...plans[planType], newPlan]
-    });
-    toast({
-      title: "Успешно",
-      description: `План "${plan.name}" добавлен`,
-    });
-  };
-
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return "0 KB";
     const kb = bytes / 1024;
@@ -754,96 +679,287 @@ export default function CRM() {
             </TabsList>
 
             <TabsContent value="plots">
-              <Card>
-                <CardHeader>
-                  <div>
-                    <CardTitle>Планирование по участкам</CardTitle>
-                    <CardDescription>Планы по посеву и сбору урожая</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {plans.plots.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Планирование работ на участках</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2">
-                      {plans.plots.map((plan) => (
-                        <Button key={plan.id} variant="outline" className="w-full justify-start">
-                          <FileText className="mr-2 h-4 w-4" />
-                          {plan.name}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Templates Column */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Шаблоны планов участков</CardTitle>
+                    <CardDescription>Выберите шаблон для заполнения</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-2">
+                        {getTemplatesByPlacement("planning_plots").length === 0 ? (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>Нет шаблонов для участков</p>
+                            <p className="text-sm mt-1">Создайте шаблон в разделе Документы</p>
+                          </div>
+                        ) : (
+                          getTemplatesByPlacement("planning_plots").map((placement) => (
+                            <TemplateButton
+                              key={placement.id}
+                              templateId={placement.template_id}
+                              templateName={placement.template.name}
+                              templateVariables={
+                                Array.isArray(placement.template.variables)
+                                  ? placement.template.variables.filter((v): v is string => typeof v === "string")
+                                  : []
+                              }
+                              companyId={companyId!}
+                              userId={userId!}
+                              userName={userName}
+                              onGenerated={() => {
+                                if (companyId) loadGeneratedDocuments(companyId);
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Generated Documents Column */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Сформированные планы</CardTitle>
+                    <CardDescription>История сгенерированных документов</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-2">
+                        {generatedDocuments.filter((doc) =>
+                          getTemplatesByPlacement("planning_plots").some((p) => p.template_id === doc.template_id)
+                        ).length === 0 ? (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>Нет сформированных планов</p>
+                          </div>
+                        ) : (
+                          generatedDocuments
+                            .filter((doc) =>
+                              getTemplatesByPlacement("planning_plots").some((p) => p.template_id === doc.template_id)
+                            )
+                            .map((doc) => (
+                              <div key={doc.id} className="p-4 border rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{doc.file_name}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {doc.created_by_name} •{" "}
+                                      {formatDistanceToNow(new Date(doc.created_at), {
+                                        addSuffix: true,
+                                        locale: ru,
+                                      })}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDownloadGeneratedDoc(doc)}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="equipment">
-              <Card>
-                <CardHeader>
-                  <div>
-                    <CardTitle>Планирование работы техники</CardTitle>
-                    <CardDescription>График использования техники</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {plans.equipment.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Планирование работы техники</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2">
-                      {plans.equipment.map((plan) => (
-                        <Button key={plan.id} variant="outline" className="w-full justify-start">
-                          <FileText className="mr-2 h-4 w-4" />
-                          {plan.name}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Templates Column */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Шаблоны планов техники</CardTitle>
+                    <CardDescription>Выберите шаблон для заполнения</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-2">
+                        {getTemplatesByPlacement("planning_equipment").length === 0 ? (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>Нет шаблонов для техники</p>
+                            <p className="text-sm mt-1">Создайте шаблон в разделе Документы</p>
+                          </div>
+                        ) : (
+                          getTemplatesByPlacement("planning_equipment").map((placement) => (
+                            <TemplateButton
+                              key={placement.id}
+                              templateId={placement.template_id}
+                              templateName={placement.template.name}
+                              templateVariables={
+                                Array.isArray(placement.template.variables)
+                                  ? placement.template.variables.filter((v): v is string => typeof v === "string")
+                                  : []
+                              }
+                              companyId={companyId!}
+                              userId={userId!}
+                              userName={userName}
+                              onGenerated={() => {
+                                if (companyId) loadGeneratedDocuments(companyId);
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Generated Documents Column */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Сформированные планы</CardTitle>
+                    <CardDescription>История сгенерированных документов</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-2">
+                        {generatedDocuments.filter((doc) =>
+                          getTemplatesByPlacement("planning_equipment").some((p) => p.template_id === doc.template_id)
+                        ).length === 0 ? (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>Нет сформированных планов</p>
+                          </div>
+                        ) : (
+                          generatedDocuments
+                            .filter((doc) =>
+                              getTemplatesByPlacement("planning_equipment").some((p) => p.template_id === doc.template_id)
+                            )
+                            .map((doc) => (
+                              <div key={doc.id} className="p-4 border rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{doc.file_name}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {doc.created_by_name} •{" "}
+                                      {formatDistanceToNow(new Date(doc.created_at), {
+                                        addSuffix: true,
+                                        locale: ru,
+                                      })}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDownloadGeneratedDoc(doc)}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="facilities">
-              <Card>
-                <CardHeader>
-                  <div>
-                    <CardTitle>Планирование загрузки объектов</CardTitle>
-                    <CardDescription>Загрузка и выгрузка урожая на объектах</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {plans.facilities.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Планирование работы объектов</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2">
-                      {plans.facilities.map((plan) => (
-                        <Button key={plan.id} variant="outline" className="w-full justify-start">
-                          <FileText className="mr-2 h-4 w-4" />
-                          {plan.name}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Templates Column */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Шаблоны планов объектов</CardTitle>
+                    <CardDescription>Выберите шаблон для заполнения</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-2">
+                        {getTemplatesByPlacement("planning_facilities").length === 0 ? (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>Нет шаблонов для объектов</p>
+                            <p className="text-sm mt-1">Создайте шаблон в разделе Документы</p>
+                          </div>
+                        ) : (
+                          getTemplatesByPlacement("planning_facilities").map((placement) => (
+                            <TemplateButton
+                              key={placement.id}
+                              templateId={placement.template_id}
+                              templateName={placement.template.name}
+                              templateVariables={
+                                Array.isArray(placement.template.variables)
+                                  ? placement.template.variables.filter((v): v is string => typeof v === "string")
+                                  : []
+                              }
+                              companyId={companyId!}
+                              userId={userId!}
+                              userName={userName}
+                              onGenerated={() => {
+                                if (companyId) loadGeneratedDocuments(companyId);
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Generated Documents Column */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Сформированные планы</CardTitle>
+                    <CardDescription>История сгенерированных документов</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-2">
+                        {generatedDocuments.filter((doc) =>
+                          getTemplatesByPlacement("planning_facilities").some((p) => p.template_id === doc.template_id)
+                        ).length === 0 ? (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>Нет сформированных планов</p>
+                          </div>
+                        ) : (
+                          generatedDocuments
+                            .filter((doc) =>
+                              getTemplatesByPlacement("planning_facilities").some((p) => p.template_id === doc.template_id)
+                            )
+                            .map((doc) => (
+                              <div key={doc.id} className="p-4 border rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex-1">
+                                    <p className="font-medium">{doc.file_name}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {doc.created_by_name} •{" "}
+                                      {formatDistanceToNow(new Date(doc.created_at), {
+                                        addSuffix: true,
+                                        locale: ru,
+                                      })}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDownloadGeneratedDoc(doc)}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
-
-          <AddPlanDialog
-            open={addPlanOpen}
-            onOpenChange={setAddPlanOpen}
-            planType={planType}
-            onAdd={handleAddPlan}
-          />
         </TabsContent>
 
         <TabsContent value="chat">
@@ -1094,92 +1210,188 @@ export default function CRM() {
         </TabsContent>
 
         <TabsContent value="documents">
-          <Card>
-            <CardHeader>
-              <CardTitle>Документы и файлы</CardTitle>
-              <CardDescription>Хранение и обмен документами</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 mb-4">
-                <Button onClick={() => document.getElementById('file-upload')?.click()} disabled={uploadingFile}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  {uploadingFile ? 'Загрузка...' : 'Загрузить документ'}
-                </Button>
-                {isAdmin && companyId && userId && (
-                  <Button variant="outline" onClick={() => setTemplatesOpen(true)}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Шаблоны документов
-                  </Button>
-                )}
-                <input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </div>
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-2">
-                  {documents.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">Нет документов</p>
-                  ) : (
-                    documents.map((doc) => (
-                      <div key={doc.id} className="p-4 border rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          <FileText className="w-8 h-8 text-muted-foreground" />
-                          <div className="flex-1">
-                            <p className="font-medium">{doc.file_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {doc.uploader_name} • {formatFileSize(doc.file_size)}
-                            </p>
-                            {doc.description && (
-                              <p className="text-xs text-muted-foreground mt-1">{doc.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(doc.created_at), {
-                              addSuffix: true,
-                              locale: ru,
-                            })}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              if (!companyId) return;
-                              
-                              const { error } = await supabase
-                                .from('crm_documents')
-                                .delete()
-                                .eq('id', doc.id);
-                              
-                              if (error) {
-                                toast({
-                                  title: 'Ошибка',
-                                  description: 'Не удалось удалить документ',
-                                  variant: 'destructive',
-                                });
-                              } else {
-                                toast({
-                                  title: 'Успешно',
-                                  description: 'Документ удален',
-                                });
-                                loadDocuments(companyId);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Templates Column */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Шаблоны документов</CardTitle>
+                    <CardDescription>Выберите шаблон для заполнения</CardDescription>
+                  </div>
+                  {isAdmin && companyId && userId && (
+                    <Button variant="outline" size="sm" onClick={() => setTemplatesOpen(true)}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      Управление
+                    </Button>
                   )}
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-2">
+                    {getTemplatesByPlacement("documents").length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>Нет шаблонов документов</p>
+                        <p className="text-sm mt-1">Создайте шаблон через кнопку Управление</p>
+                      </div>
+                    ) : (
+                      getTemplatesByPlacement("documents").map((placement) => (
+                        <TemplateButton
+                          key={placement.id}
+                          templateId={placement.template_id}
+                          templateName={placement.template.name}
+                          templateVariables={
+                            Array.isArray(placement.template.variables)
+                              ? placement.template.variables.filter((v): v is string => typeof v === "string")
+                              : []
+                          }
+                          companyId={companyId!}
+                          userId={userId!}
+                          userName={userName}
+                          onGenerated={() => {
+                            if (companyId) loadGeneratedDocuments(companyId);
+                          }}
+                        />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Generated Documents Column */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Сформированные документы</CardTitle>
+                    <CardDescription>История сгенерированных документов</CardDescription>
+                  </div>
+                  <Button size="sm" onClick={() => document.getElementById('file-upload')?.click()} disabled={uploadingFile}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploadingFile ? 'Загрузка...' : 'Загрузить'}
+                  </Button>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-2">
+                    {/* Show generated documents from templates */}
+                    {generatedDocuments.filter((doc) =>
+                      getTemplatesByPlacement("documents").some((p) => p.template_id === doc.template_id)
+                    ).length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        <h4 className="text-sm font-semibold text-muted-foreground">Из шаблонов</h4>
+                        {generatedDocuments
+                          .filter((doc) =>
+                            getTemplatesByPlacement("documents").some((p) => p.template_id === doc.template_id)
+                          )
+                          .map((doc) => (
+                            <div key={doc.id} className="p-4 border rounded-lg">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex-1">
+                                  <p className="font-medium">{doc.file_name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {doc.created_by_name} •{" "}
+                                    {formatDistanceToNow(new Date(doc.created_at), {
+                                      addSuffix: true,
+                                      locale: ru,
+                                    })}
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDownloadGeneratedDoc(doc)}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Show uploaded documents */}
+                    {documents.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-muted-foreground">Загруженные файлы</h4>
+                        {documents.map((doc) => (
+                          <div key={doc.id} className="p-4 border rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-3 flex-1">
+                              <FileText className="w-8 h-8 text-muted-foreground" />
+                              <div className="flex-1">
+                                <p className="font-medium">{doc.file_name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {doc.uploader_name} • {formatFileSize(doc.file_size)}
+                                </p>
+                                {doc.description && (
+                                  <p className="text-xs text-muted-foreground mt-1">{doc.description}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(doc.created_at), {
+                                  addSuffix: true,
+                                  locale: ru,
+                                })}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  if (!companyId) return;
+                                  
+                                  const { error } = await supabase
+                                    .from('crm_documents')
+                                    .delete()
+                                    .eq('id', doc.id);
+                                  
+                                  if (error) {
+                                    toast({
+                                      title: 'Ошибка',
+                                      description: 'Не удалось удалить документ',
+                                      variant: 'destructive',
+                                    });
+                                  } else {
+                                    toast({
+                                      title: 'Успешно',
+                                      description: 'Документ удален',
+                                    });
+                                    loadDocuments(companyId);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {documents.length === 0 && generatedDocuments.filter((doc) =>
+                      getTemplatesByPlacement("documents").some((p) => p.template_id === doc.template_id)
+                    ).length === 0 && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>Нет документов</p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="contacts">
@@ -1333,33 +1545,13 @@ export default function CRM() {
       </Tabs>
 
       {/* Dialogs */}
-      <AddReportDialog 
-        open={addReportOpen} 
-        onOpenChange={setAddReportOpen} 
-        onAdd={handleAddReport} 
-      />
-      <ReportSettingsDialog 
-        open={reportSettingsOpen} 
-        onOpenChange={setReportSettingsOpen} 
-        reportName={selectedReport} 
-      />
-      <ReportFormDialog 
-        open={reportFormOpen} 
-        onOpenChange={setReportFormOpen} 
-        reportName={selectedReport} 
-      />
-      <AddPlanDialog 
-        open={addPlanOpen} 
-        onOpenChange={setAddPlanOpen} 
-        onAdd={handleAddPlan} 
-        planType={planType} 
-      />
       {isAdmin && companyId && userId && (
         <DocumentTemplatesDialog 
           open={templatesOpen} 
           onOpenChange={setTemplatesOpen} 
           companyId={companyId} 
           userId={userId}
+          userName={userName}
         />
       )}
     </div>
