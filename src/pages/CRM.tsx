@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Send, Mail, Users, FileText, Upload, Trash2, User, MessageSquare, Settings } from "lucide-react";
+import { Send, Mail, Users, FileText, Upload, Trash2, User, MessageSquare, Settings, Download } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ import { ReportSettingsDialog } from "@/components/forms/ReportSettingsDialog";
 import { ReportFormDialog } from "@/components/forms/ReportFormDialog";
 import { AddPlanDialog } from "@/components/forms/AddPlanDialog";
 import { DocumentTemplatesDialog } from "@/components/forms/DocumentTemplatesDialog";
+import { TemplateButton } from "@/components/forms/TemplateButton";
 
 interface Message {
   id: string;
@@ -51,6 +52,27 @@ interface Document {
   created_at: string;
 }
 
+interface GeneratedDocument {
+  id: string;
+  template_id: string;
+  file_name: string;
+  file_url: string;
+  filled_data: any;
+  created_by_name: string;
+  created_at: string;
+}
+
+interface TemplatePlacement {
+  id: string;
+  template_id: string;
+  placement_type: string;
+  template: {
+    id: string;
+    name: string;
+    variables: any;
+  };
+}
+
 interface Contact {
   id: string;
   contact_type: string;
@@ -77,6 +99,8 @@ export default function CRM() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
+  const [templatePlacements, setTemplatePlacements] = useState<TemplatePlacement[]>([]);
+  const [generatedDocuments, setGeneratedDocuments] = useState<GeneratedDocument[]>([]);
   const { toast } = useToast();
 
   const [newMessage, setNewMessage] = useState("");
@@ -282,6 +306,8 @@ export default function CRM() {
     loadEmails(profile.company_id);
     loadDocuments(profile.company_id);
     loadContacts(profile.company_id);
+    loadTemplatePlacements(profile.company_id);
+    loadGeneratedDocuments(profile.company_id);
     loadAnalytics();
   };
 
@@ -371,6 +397,36 @@ export default function CRM() {
       .order("created_at", { ascending: false });
 
     if (data) setContacts(data);
+  };
+
+  const loadTemplatePlacements = async (companyId: string) => {
+    const { data } = await supabase
+      .from("template_placements")
+      .select(`
+        *,
+        template:document_templates(id, name, variables)
+      `)
+      .eq("company_id", companyId);
+
+    if (data) {
+      const placements = data.map(p => ({
+        id: p.id,
+        template_id: p.template_id,
+        placement_type: p.placement_type,
+        template: p.template as any
+      }));
+      setTemplatePlacements(placements);
+    }
+  };
+
+  const loadGeneratedDocuments = async (companyId: string) => {
+    const { data } = await supabase
+      .from("generated_documents")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false });
+
+    if (data) setGeneratedDocuments(data);
   };
 
   const handleSendMessage = async () => {
@@ -508,6 +564,54 @@ export default function CRM() {
     return `${(kb / 1024).toFixed(1)} MB`;
   };
 
+  const getTemplatesByPlacement = (placementType: string) => {
+    return templatePlacements.filter(p => p.placement_type === placementType);
+  };
+
+  const getDocumentsByTemplate = (templateId: string) => {
+    return generatedDocuments.filter(d => d.template_id === templateId);
+  };
+
+  const handleDownloadGeneratedDoc = async (doc: GeneratedDocument) => {
+    try {
+      let storagePath: string | null = null;
+
+      try {
+        const url = new URL(doc.file_url);
+        const afterBucket = url.pathname.split("/generated-documents/")[1];
+        storagePath = afterBucket || null;
+      } catch (e) {
+        console.error("Error parsing file URL:", e);
+      }
+
+      if (!storagePath) {
+        throw new Error("Некорректный путь к файлу");
+      }
+
+      const { data, error } = await supabase.storage
+        .from("generated-documents")
+        .download(storagePath);
+
+      if (error || !data) {
+        throw error || new Error("Не удалось скачать файл");
+      }
+
+      const blob = new Blob([data]);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = doc.file_name;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось скачать документ",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -547,73 +651,97 @@ export default function CRM() {
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Отчеты</CardTitle>
-                  <CardDescription>Управление отчетами для сотрудников</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {reports.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Пока нет созданных отчетов</p>
-                  <p className="text-sm mt-1">Создайте первый отчет для заполнения сотрудниками</p>
-                </div>
-              ) : (
-                <div className="grid gap-3">
-                  {reports.map((report) => (
-                    <div key={report.id} className="flex items-center gap-2 p-3 border rounded-lg">
-                      {isAdmin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedReport(report.name);
-                            setReportSettingsOpen(true);
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Templates Column */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Шаблоны отчетов</CardTitle>
+                <CardDescription>Выберите шаблон для заполнения</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-2">
+                    {getTemplatesByPlacement("reports").length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>Нет шаблонов отчетов</p>
+                        <p className="text-sm mt-1">Создайте шаблон в разделе Документы</p>
+                      </div>
+                    ) : (
+                      getTemplatesByPlacement("reports").map((placement) => (
+                        <TemplateButton
+                          key={placement.id}
+                          templateId={placement.template_id}
+                          templateName={placement.template.name}
+                          templateVariables={
+                            Array.isArray(placement.template.variables)
+                              ? placement.template.variables.filter((v): v is string => typeof v === "string")
+                              : []
+                          }
+                          companyId={companyId!}
+                          userId={userId!}
+                          userName={userName}
+                          onGenerated={() => {
+                            if (companyId) loadGeneratedDocuments(companyId);
                           }}
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="default"
-                        className="flex-1"
-                        onClick={() => {
-                          setSelectedReport(report.name);
-                          setReportFormOpen(true);
-                        }}
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        {report.name}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
 
-          <AddReportDialog
-            open={addReportOpen}
-            onOpenChange={setAddReportOpen}
-            onAdd={handleAddReport}
-          />
-
-          <ReportSettingsDialog
-            open={reportSettingsOpen}
-            onOpenChange={setReportSettingsOpen}
-            reportName={selectedReport}
-          />
-
-          <ReportFormDialog
-            open={reportFormOpen}
-            onOpenChange={setReportFormOpen}
-            reportName={selectedReport}
-          />
+            {/* Generated Documents Column */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Сформированные отчеты</CardTitle>
+                <CardDescription>История сгенерированных документов</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-2">
+                    {generatedDocuments.filter((doc) =>
+                      getTemplatesByPlacement("reports").some((p) => p.template_id === doc.template_id)
+                    ).length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>Нет сформированных отчетов</p>
+                      </div>
+                    ) : (
+                      generatedDocuments
+                        .filter((doc) =>
+                          getTemplatesByPlacement("reports").some((p) => p.template_id === doc.template_id)
+                        )
+                        .map((doc) => (
+                          <div key={doc.id} className="p-4 border rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex-1">
+                                <p className="font-medium">{doc.file_name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {doc.created_by_name} •{" "}
+                                  {formatDistanceToNow(new Date(doc.created_at), {
+                                    addSuffix: true,
+                                    locale: ru,
+                                  })}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDownloadGeneratedDoc(doc)}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Planning Tab */}

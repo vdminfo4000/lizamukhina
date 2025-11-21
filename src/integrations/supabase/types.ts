@@ -914,6 +914,41 @@ export type Database = {
         }
         Relationships: []
       }
+      template_placements: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string
+          id: string
+          placement_type: string
+          template_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          placement_type: string
+          template_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          placement_type?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_placements_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           access_level: Database["public"]["Enums"]["access_level"]
