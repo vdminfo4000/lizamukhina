@@ -285,21 +285,32 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
       // Load and prepare the template with detailed error handling
       let doc: Docxtemplater;
       try {
-        const zip = new PizZip(arrayBuffer);
-        doc = new Docxtemplater(zip, {
-          paragraphLoop: true,
-          linebreaks: true,
-          // Безопасная обработка отсутствующих значений
-          nullGetter(part) {
-            if (!part.module) {
-              return ""; // Заменяем пустые значения на пустую строку
-            }
-            if (part.module === "rawxml") {
-              return ""; // Для rawxml тоже возвращаем пустую строку
-            }
-            return "";
-          },
-        });
+        const createDoc = (tolerant: boolean) => {
+          const zip = new PizZip(arrayBuffer);
+          return new Docxtemplater(zip, {
+            paragraphLoop: true,
+            linebreaks: true,
+            // Безопасная обработка отсутствующих значений
+            nullGetter(part) {
+              if (!part.module) {
+                return ""; // Заменяем пустые значения на пустую строку
+              }
+              if (part.module === "rawxml") {
+                return ""; // Для rawxml тоже возвращаем пустую строку
+              }
+              return "";
+            },
+            ...(tolerant
+              ? {
+                  // Более терпимая обработка разорванных/незакрытых тегов
+                  syntax: {
+                    allowUnopenedTag: true,
+                    allowUnclosedTag: true,
+                  },
+                }
+              : {}),
+          });
+        };
 
         // Очищаем данные: заменяем null/undefined на пустые строки
         const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
@@ -307,8 +318,30 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
           return acc;
         }, {} as Record<string, string>);
 
-        // Set the data
-        doc.render(cleanedData);
+        // Первая попытка: строгий режим
+        doc = createDoc(false);
+        try {
+          doc.render(cleanedData);
+        } catch (innerError: any) {
+          const errorId = innerError?.properties?.id as string | undefined;
+          const message = innerError?.message as string | undefined;
+          const isTagStructureError =
+            errorId === "unclosed_tag" ||
+            errorId === "duplicate_open_tag" ||
+            (message && message.toLowerCase().includes("duplicateopentag"));
+
+          if (!isTagStructureError) {
+            throw innerError;
+          }
+
+          // Вторая попытка: терпимый режим для проблемных/дублирующих тегов
+          console.warn("Retrying Docxtemplater render in tolerant mode due to tag structure error", {
+            errorId,
+            message,
+          });
+          doc = createDoc(true);
+          doc.render(cleanedData);
+        }
       } catch (renderError: any) {
         console.error('Docxtemplater template error:', renderError);
 
