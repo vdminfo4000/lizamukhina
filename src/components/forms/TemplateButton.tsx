@@ -77,6 +77,23 @@ export function TemplateButton({
 
       // Generate document using Docxtemplater
       const zip = new PizZip(arrayBuffer);
+      
+      // Fix broken tags in XML (Word splits tags across multiple XML elements)
+      const fixBrokenTags = (text: string) => {
+        // Remove XML tags between {{ and }}
+        return text.replace(/\{\{([^}]*?)<[^>]+>([^}]*?)\}\}/g, (match, before, after) => {
+          const cleaned = match.replace(/<[^>]+>/g, '');
+          return cleaned;
+        });
+      };
+
+      // Apply fix to all XML files in the document
+      zip.file(/\.xml$/).forEach((file: any) => {
+        const content = zip.file(file.name).asText();
+        const fixed = fixBrokenTags(content);
+        zip.file(file.name, fixed);
+      });
+
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
