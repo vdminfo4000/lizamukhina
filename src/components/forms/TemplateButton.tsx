@@ -58,9 +58,16 @@ export function TemplateButton({
         throw new Error("У шаблона нет файла");
       }
 
-      // Download template file
-      const response = await fetch(template.file_url);
-      const arrayBuffer = await response.arrayBuffer();
+      // Download template file from storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("document-templates")
+        .download(template.file_url);
+
+      if (downloadError || !fileData) {
+        throw new Error("Не удалось загрузить файл шаблона");
+      }
+
+      const arrayBuffer = await fileData.arrayBuffer();
 
       // Generate document using Docxtemplater
       const zip = new PizZip(arrayBuffer);
