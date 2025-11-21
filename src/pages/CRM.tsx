@@ -43,6 +43,7 @@ interface Document {
   id: string;
   uploader_name: string;
   file_name: string;
+  file_url: string;
   file_size: number | null;
   description: string | null;
   created_at: string;
@@ -97,6 +98,11 @@ export default function CRM() {
   const [userName, setUserName] = useState<string>("");
   const [templatePlacements, setTemplatePlacements] = useState<TemplatePlacement[]>([]);
   const [generatedDocuments, setGeneratedDocuments] = useState<GeneratedDocument[]>([]);
+  const [reportDocuments, setReportDocuments] = useState<Document[]>([]);
+  const [contactDocuments, setContactDocuments] = useState<Document[]>([]);
+  const [dealDocuments, setDealDocuments] = useState<Document[]>([]);
+  const [emailDocuments, setEmailDocuments] = useState<Document[]>([]);
+  const [chatDocuments, setChatDocuments] = useState<Document[]>([]);
   const { toast } = useToast();
 
   const [newMessage, setNewMessage] = useState("");
@@ -260,6 +266,7 @@ export default function CRM() {
     loadContacts(profile.company_id);
     loadTemplatePlacements(profile.company_id);
     loadGeneratedDocuments(profile.company_id);
+    loadPlacementDocuments(profile.company_id);
     loadAnalytics();
   };
 
@@ -379,6 +386,37 @@ export default function CRM() {
       .order("created_at", { ascending: false });
 
     if (data) setGeneratedDocuments(data);
+  };
+
+  const loadDocumentsByPlacement = async (companyId: string, placementType: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("crm_documents")
+        .select("*")
+        .eq("company_id", companyId)
+        .contains("tags", [placementType])
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error loading documents by placement:", error);
+      return [];
+    }
+  };
+
+  const loadPlacementDocuments = async (companyId: string) => {
+    const reports = await loadDocumentsByPlacement(companyId, "reports");
+    const contacts = await loadDocumentsByPlacement(companyId, "contacts");
+    const deals = await loadDocumentsByPlacement(companyId, "deals");
+    const emails = await loadDocumentsByPlacement(companyId, "emails");
+    const chats = await loadDocumentsByPlacement(companyId, "chats");
+    
+    setReportDocuments(reports);
+    setContactDocuments(contacts);
+    setDealDocuments(deals);
+    setEmailDocuments(emails);
+    setChatDocuments(chats);
   };
 
   const handleSendMessage = async () => {
@@ -606,10 +644,11 @@ export default function CRM() {
                           companyId={companyId!}
                           userId={userId!}
                           userName={userName}
+                          placementType="reports"
                           onGenerated={() => {
                             if (companyId) {
                               loadGeneratedDocuments(companyId);
-                              loadDocuments(companyId);
+                              loadPlacementDocuments(companyId);
                             }
                           }}
                         />
@@ -617,6 +656,37 @@ export default function CRM() {
                     )}
                   </div>
                 </ScrollArea>
+                
+                {reportDocuments.length > 0 && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="mb-2">
+                      <h4 className="text-sm font-medium">Сформированные документы</h4>
+                    </div>
+                    <ScrollArea className="h-[300px]">
+                      <div className="space-y-2">
+                        {reportDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{doc.file_name}</p>
+                              <p className="text-xs text-muted-foreground">{doc.description}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(doc.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(doc.file_url, "_blank")}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -712,10 +782,11 @@ export default function CRM() {
                               companyId={companyId!}
                               userId={userId!}
                               userName={userName}
+                              placementType="planning_plots"
                               onGenerated={() => {
                                 if (companyId) {
                                   loadGeneratedDocuments(companyId);
-                                  loadDocuments(companyId);
+                                  loadPlacementDocuments(companyId);
                                 }
                               }}
                             />
@@ -809,10 +880,11 @@ export default function CRM() {
                               companyId={companyId!}
                               userId={userId!}
                               userName={userName}
+                              placementType="planning_equipment"
                               onGenerated={() => {
                                 if (companyId) {
                                   loadGeneratedDocuments(companyId);
-                                  loadDocuments(companyId);
+                                  loadPlacementDocuments(companyId);
                                 }
                               }}
                             />
@@ -906,10 +978,11 @@ export default function CRM() {
                               companyId={companyId!}
                               userId={userId!}
                               userName={userName}
+                              placementType="planning_facilities"
                               onGenerated={() => {
                                 if (companyId) {
                                   loadGeneratedDocuments(companyId);
-                                  loadDocuments(companyId);
+                                  loadPlacementDocuments(companyId);
                                 }
                               }}
                             />
@@ -1262,10 +1335,11 @@ export default function CRM() {
                           companyId={companyId!}
                           userId={userId!}
                           userName={userName}
+                          placementType="documents"
                           onGenerated={() => {
                             if (companyId) {
                               loadGeneratedDocuments(companyId);
-                              loadDocuments(companyId);
+                              loadPlacementDocuments(companyId);
                             }
                           }}
                         />

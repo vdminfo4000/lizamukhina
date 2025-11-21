@@ -23,6 +23,7 @@ interface TemplateButtonProps {
   companyId: string;
   userId: string;
   userName: string;
+  placementType?: string;
   onGenerated: () => void;
 }
 
@@ -33,6 +34,7 @@ export function TemplateButton({
   companyId,
   userId,
   userName,
+  placementType,
   onGenerated,
 }: TemplateButtonProps) {
   const [open, setOpen] = useState(false);
@@ -136,7 +138,11 @@ export function TemplateButton({
 
       if (dbError) throw dbError;
 
-      // Also save a copy to crm_documents
+      // Save a copy to crm_documents with placement_type in description
+      const description = placementType 
+        ? `Сгенерирован из шаблона: ${templateName} (${placementType})`
+        : `Сгенерирован из шаблона: ${templateName}`;
+        
       const { error: crmDocError } = await supabase
         .from("crm_documents")
         .insert({
@@ -147,12 +153,12 @@ export function TemplateButton({
           file_type: blob.type,
           uploaded_by: userId,
           uploader_name: userName,
-          description: `Сгенерирован из шаблона: ${templateName}`,
+          description: description,
+          tags: placementType ? [placementType] : [],
         });
 
       if (crmDocError) {
         console.error("Error saving to crm_documents:", crmDocError);
-        // Don't throw - main document was saved successfully
       }
 
       toast({
