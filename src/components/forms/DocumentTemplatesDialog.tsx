@@ -270,11 +270,11 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
 
     try {
       // Download the template file from Supabase Storage
-      const templateFileName = selectedTemplate.file_url.split('/').pop();
+      const templateFileName = selectedTemplate.file_url.split("/").pop();
       if (!templateFileName) throw new Error("Invalid file URL");
 
       const { data: fileData, error: downloadError } = await supabase.storage
-        .from('document-templates')
+        .from("document-templates")
         .download(`${companyId}/${templateFileName}`);
 
       if (downloadError || !fileData) throw downloadError || new Error("Failed to download template");
@@ -288,107 +288,50 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         return acc;
       }, {} as Record<string, string>);
 
-      // Load and prepare the template with tolerant handling of разорванных/дублированных тегов
-      let doc: Docxtemplater | null = null;
-      let templateErrorMessage = "";
+      // ---- ГЕНЕРАЦИЯ ДОКУМЕНТА БЕЗ DOCXTEMPLATER ----
+      // Не пытаемся "чинить" или разбирать теги (duplicate_open_tag/duplicate_close_tag и т.п.),
+      // а просто подставляем значения вместо {{ПОЛЕ}} прямо в исходный XML.
+      const zip = new PizZip(arrayBuffer);
+      const docFile = zip.file("word/document.xml");
 
-      const createDoc = (buffer: ArrayBuffer) => {
-        const zip = new PizZip(buffer);
-        return new Docxtemplater(zip, {
-          paragraphLoop: true,
-          linebreaks: true,
-          // Используем те же двойные фигурные скобки, что и в шаблоне: {{поле}}
-          delimiters: {
-            start: "{{",
-            end: "}}",
-          },
-          // Терпимо относимся к незакрытым/неоткрытым тегам, чтобы не падать на «битых» метках
-          syntax: {
-            allowUnopenedTag: true,
-            allowUnclosedTag: true,
-          },
-          // Безопасная обработка отсутствующих значений
-          nullGetter(part) {
-            if (!part.module) {
-              return "";
-            }
-            if (part.module === "rawxml") {
-              return "";
-            }
-            return "";
-          },
-        });
-      };
-
-      try {
-        doc = createDoc(arrayBuffer);
-        doc.render(cleanedData);
-      } catch (renderError: any) {
-        console.error("Docxtemplater template error:", renderError);
-
-        const templateErrorsRaw = renderError?.properties?.errors as any[] | undefined;
-
-        if (templateErrorsRaw && templateErrorsRaw.length > 0) {
-          const messages = templateErrorsRaw
-            .map((e) => {
-              const err = (e as any)?.properties ? e : (e as any)?.value;
-              const xtag = err?.properties?.xtag as string | undefined;
-              const explanation = err?.properties?.explanation as string | undefined;
-              const message = err?.properties?.message as string | undefined;
-              const parts: string[] = [];
-              if (xtag) parts.push(String(xtag));
-              if (explanation || message) parts.push(String(explanation || message));
-              return parts.join(" — ");
-            })
-            .filter(Boolean)
-            .join("\n");
-
-          templateErrorMessage = messages;
-        } else {
-          const baseMessage = renderError?.message as string | undefined;
-          templateErrorMessage =
-            baseMessage ||
-            "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.";
-        }
-
-        doc = null;
+      if (!docFile) {
+        throw new Error("Не удалось найти основной документ в шаблоне (word/document.xml)");
       }
 
+      let xml = docFile.asText();
 
-      if (!doc) {
-        toast({
-          title: "Ошибка в шаблоне документа",
-          description:
-            templateErrorMessage ||
-            "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.",
-          variant: "destructive",
-        });
+      const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-        setIsProcessing(false);
-        return;
+      for (const [key, value] of Object.entries(cleanedData)) {
+        const placeholder = `{{${key}}}`;
+        const pattern = new RegExp(escapeRegExp(placeholder), "g");
+        xml = xml.replace(pattern, value);
       }
 
-      // Generate the document
-      const blob = doc.getZip().generate({
-        type: 'blob',
-        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      // Записываем обновлённый XML обратно в архив
+      zip.file("word/document.xml", xml);
+
+      // Генерируем корректный DOCX из архива
+      const blob = zip.generate({
+        type: "blob",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
 
       // Upload generated document to storage (используем безопасное имя файла без спецсимволов)
       const storageKey = `${companyId}/${Date.now()}_${selectedTemplate.id}.docx`;
       const { error: uploadError } = await supabase.storage
-        .from('generated-documents')
+        .from("generated-documents")
         .upload(storageKey, blob);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('generated-documents')
+        .from("generated-documents")
         .getPublicUrl(storageKey);
 
       // Save to generated_documents table
-      const { error: dbError } = await supabase.from('generated_documents').insert({
+      const { error: dbError } = await supabase.from("generated_documents").insert({
         company_id: companyId,
         template_id: selectedTemplate.id,
         file_name: `${selectedTemplate.name}.docx`,
@@ -401,18 +344,20 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
       if (dbError) throw dbError;
 
       toast({
-        title: "Успешно",
-        description: "Документ сгенерирован и добавлен в список",
+        title: "Документ сгенерирован",
+        description: "Файл успешно создан и сохранен в CRM",
       });
 
       setFillFormOpen(false);
       setFormData({});
       loadGeneratedDocuments();
-    } catch (error) {
-      console.error('Error generating document:', error);
+    } catch (error: any) {
+      console.error("Error generating document:", error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось сгенерировать документ",
+        title: "Ошибка генерации документа",
+        description:
+          error?.message ||
+          "Не удалось сгенерировать документ. Проверьте шаблон и заполненные данные.",
         variant: "destructive",
       });
     } finally {
