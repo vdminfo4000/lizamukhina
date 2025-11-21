@@ -351,18 +351,18 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       });
 
-      // Upload generated document to storage
-      const fileName = `${companyId}/${Date.now()}_${selectedTemplate.name}.docx`;
+      // Upload generated document to storage (используем безопасное имя файла без спецсимволов)
+      const storageKey = `${companyId}/${Date.now()}_${selectedTemplate.id}.docx`;
       const { error: uploadError } = await supabase.storage
         .from('generated-documents')
-        .upload(fileName, blob);
+        .upload(storageKey, blob);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: urlData } = supabase.storage
         .from('generated-documents')
-        .getPublicUrl(fileName);
+        .getPublicUrl(storageKey);
 
       // Save to generated_documents table
       const { error: dbError } = await supabase.from('generated_documents').insert({
