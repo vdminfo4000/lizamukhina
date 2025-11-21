@@ -58,10 +58,16 @@ export function TemplateButton({
         throw new Error("У шаблона нет файла");
       }
 
+      // Extract path from full URL if needed
+      let templatePath = template.file_url;
+      if (templatePath.includes('/object/public/document-templates/')) {
+        templatePath = templatePath.split('/object/public/document-templates/')[1];
+      }
+
       // Download template file from storage
       const { data: fileData, error: downloadError } = await supabase.storage
         .from("document-templates")
-        .download(template.file_url);
+        .download(templatePath);
 
       if (downloadError || !fileData) {
         throw new Error("Не удалось загрузить файл шаблона");
