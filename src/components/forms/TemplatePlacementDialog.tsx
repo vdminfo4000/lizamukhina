@@ -54,6 +54,7 @@ interface TemplatePlacementDialogProps {
   templateName: string;
   companyId: string;
   userId: string;
+  onPlacementsChange?: () => void;
 }
 
 export function TemplatePlacementDialog({
@@ -63,6 +64,7 @@ export function TemplatePlacementDialog({
   templateName,
   companyId,
   userId,
+  onPlacementsChange,
 }: TemplatePlacementDialogProps) {
   const [selectedPlacements, setSelectedPlacements] = useState<string[]>([]);
   const [existingPlacements, setExistingPlacements] = useState<string[]>([]);
@@ -149,6 +151,10 @@ export function TemplatePlacementDialog({
         title: "Успешно",
         description: "Места размещения шаблона обновлены",
       });
+
+      if (onPlacementsChange) {
+        onPlacementsChange();
+      }
 
       onOpenChange(false);
     } catch (error) {
