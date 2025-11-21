@@ -269,18 +269,25 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
     setIsProcessing(true);
 
     try {
-      // Download the template file from Supabase Storage
+      // Скачать файл шаблона из Supabase Storage
       const templateFileName = selectedTemplate.file_url.split("/").pop();
-      if (!templateFileName) throw new Error("Invalid file URL");
+      if (!templateFileName) throw new Error("Некорректный URL файла шаблона");
 
       const { data: fileData, error: downloadError } = await supabase.storage
         .from("document-templates")
         .download(`${companyId}/${templateFileName}`);
 
-      if (downloadError || !fileData) throw downloadError || new Error("Failed to download template");
+      if (downloadError || !fileData) {
+        throw downloadError || new Error("Не удалось скачать файл шаблона");
+      }
 
-      // Convert blob to arrayBuffer
+      // Преобразуем blob в бинарную строку, как ожидает Docxtemplater
       const arrayBuffer = await fileData.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < uint8Array.length; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
 
       // Подготовка данных: заменяем null/undefined на пустые строки
       const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
@@ -288,49 +295,60 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         return acc;
       }, {} as Record<string, string>);
 
-      // ---- ГЕНЕРАЦИЯ ДОКУМЕНТА БЕЗ DOCXTEMPLATER ----
-      // Не пытаемся "чинить" или разбирать теги (duplicate_open_tag/duplicate_close_tag и т.п.),
-      // а просто подставляем значения вместо {{ПОЛЕ}} прямо в исходный XML.
-      const zip = new PizZip(arrayBuffer);
-      const docFile = zip.file("word/document.xml");
+      // Создаём документ через Docxtemplater (он гарантирует корректный DOCX-формат)
+      const zip = new PizZip(binary);
+      let doc: Docxtemplater;
 
-      if (!docFile) {
-        throw new Error("Не удалось найти основной документ в шаблоне (word/document.xml)");
+      try {
+        doc = new Docxtemplater(zip, {
+          delimiters: { start: "{{", end: "}}" },
+          paragraphLoop: true,
+          linebreaks: true,
+        });
+      } catch (error: any) {
+        console.error("Error initializing Docxtemplater:", error);
+        throw new Error(
+          error?.message ||
+            "Не удалось инициализировать шаблон. Проверьте, что файл является корректным .docx-документом."
+        );
       }
 
-      let xml = docFile.asText();
+      try {
+        doc.render(cleanedData);
+      } catch (error: any) {
+        console.error("Error rendering document:", error);
 
-      const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const detailedMessage =
+          error?.properties?.errors
+            ?.map((e: any) => e.properties?.explanation)
+            .filter(Boolean)
+            .join("\n") || error?.message;
 
-      for (const [key, value] of Object.entries(cleanedData)) {
-        const placeholder = `{{${key}}}`;
-        const pattern = new RegExp(escapeRegExp(placeholder), "g");
-        xml = xml.replace(pattern, value);
+        throw new Error(
+          detailedMessage ||
+            "Ошибка в шаблоне документа. Проверьте корректность меток {{...}} и отсутствие разорванных тегов."
+        );
       }
 
-      // Записываем обновлённый XML обратно в архив
-      zip.file("word/document.xml", xml);
-
-      // Генерируем корректный DOCX из архива
-      const blob = zip.generate({
+      const out = doc.getZip().generate({
         type: "blob",
         mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
 
-      // Upload generated document to storage (используем безопасное имя файла без спецсимволов)
+      // Загружаем сгенерированный документ в хранилище
       const storageKey = `${companyId}/${Date.now()}_${selectedTemplate.id}.docx`;
       const { error: uploadError } = await supabase.storage
         .from("generated-documents")
-        .upload(storageKey, blob);
+        .upload(storageKey, out);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Получаем публичный URL файла
       const { data: urlData } = supabase.storage
         .from("generated-documents")
         .getPublicUrl(storageKey);
 
-      // Save to generated_documents table
+      // Сохраняем запись о сгенерированном документе в БД
       const { error: dbError } = await supabase.from("generated_documents").insert({
         company_id: companyId,
         template_id: selectedTemplate.id,
@@ -345,7 +363,7 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
 
       toast({
         title: "Документ сгенерирован",
-        description: "Файл успешно создан и сохранен в CRM",
+        description: "Файл успешно создан и сохранён в CRM",
       });
 
       setFillFormOpen(false);
