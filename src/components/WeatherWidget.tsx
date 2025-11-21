@@ -33,8 +33,8 @@ export function WeatherWidget({
   };
 
   return (
-    <Card className="flex-shrink-0 w-80 bg-gradient-to-br from-background to-muted/20 select-none">
-      <CardContent className="p-2">
+    <Card className="flex-shrink-0 w-80 bg-gradient-to-br from-background to-muted/20 select-none pointer-events-auto">
+      <CardContent className="p-2 pointer-events-none">
         {/* Header */}
         <div className="flex items-center gap-2 pb-1 border-b border-border/50 mb-2">
           <Sprout className="h-3 w-3 text-primary" />

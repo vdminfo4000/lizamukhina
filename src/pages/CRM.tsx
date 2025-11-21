@@ -554,12 +554,6 @@ export default function CRM() {
                   <CardTitle>Отчеты</CardTitle>
                   <CardDescription>Управление отчетами для сотрудников</CardDescription>
                 </div>
-                {isAdmin && (
-                  <Button onClick={() => setAddReportOpen(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Добавить отчет
-                  </Button>
-                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -634,18 +628,9 @@ export default function CRM() {
             <TabsContent value="plots">
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Планирование по участкам</CardTitle>
-                      <CardDescription>Планы по посеву и сбору урожая</CardDescription>
-                    </div>
-                    <Button onClick={() => {
-                      setPlanType("plots");
-                      setAddPlanOpen(true);
-                    }}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Добавить план
-                    </Button>
+                  <div>
+                    <CardTitle>Планирование по участкам</CardTitle>
+                    <CardDescription>Планы по посеву и сбору урожая</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -671,18 +656,9 @@ export default function CRM() {
             <TabsContent value="equipment">
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Планирование работы техники</CardTitle>
-                      <CardDescription>График использования техники</CardDescription>
-                    </div>
-                    <Button onClick={() => {
-                      setPlanType("equipment");
-                      setAddPlanOpen(true);
-                    }}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Добавить план
-                    </Button>
+                  <div>
+                    <CardTitle>Планирование работы техники</CardTitle>
+                    <CardDescription>График использования техники</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -708,18 +684,9 @@ export default function CRM() {
             <TabsContent value="facilities">
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Планирование загрузки объектов</CardTitle>
-                      <CardDescription>Загрузка и выгрузка урожая на объектах</CardDescription>
-                    </div>
-                    <Button onClick={() => {
-                      setPlanType("facilities");
-                      setAddPlanOpen(true);
-                    }}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Добавить план
-                    </Button>
+                  <div>
+                    <CardTitle>Планирование загрузки объектов</CardTitle>
+                    <CardDescription>Загрузка и выгрузка урожая на объектах</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -1006,16 +973,16 @@ export default function CRM() {
             </CardHeader>
             <CardContent>
               <div className="flex gap-2 mb-4">
-                {isAdmin && companyId && userId && (
-                  <Button variant="outline" onClick={() => setTemplatesOpen(true)}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Шаблоны
-                  </Button>
-                )}
                 <Button onClick={() => document.getElementById('file-upload')?.click()} disabled={uploadingFile}>
                   <Upload className="w-4 h-4 mr-2" />
                   {uploadingFile ? 'Загрузка...' : 'Загрузить документ'}
                 </Button>
+                {isAdmin && companyId && userId && (
+                  <Button variant="outline" onClick={() => setTemplatesOpen(true)}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Шаблоны документов
+                  </Button>
+                )}
                 <input
                   id="file-upload"
                   type="file"
@@ -1030,9 +997,9 @@ export default function CRM() {
                   ) : (
                     documents.map((doc) => (
                       <div key={doc.id} className="p-4 border rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           <FileText className="w-8 h-8 text-muted-foreground" />
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium">{doc.file_name}</p>
                             <p className="text-sm text-muted-foreground">
                               {doc.uploader_name} • {formatFileSize(doc.file_size)}
@@ -1042,12 +1009,42 @@ export default function CRM() {
                             )}
                           </div>
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(doc.created_at), {
-                            addSuffix: true,
-                            locale: ru,
-                          })}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(doc.created_at), {
+                              addSuffix: true,
+                              locale: ru,
+                            })}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              if (!companyId) return;
+                              
+                              const { error } = await supabase
+                                .from('crm_documents')
+                                .delete()
+                                .eq('id', doc.id);
+                              
+                              if (error) {
+                                toast({
+                                  title: 'Ошибка',
+                                  description: 'Не удалось удалить документ',
+                                  variant: 'destructive',
+                                });
+                              } else {
+                                toast({
+                                  title: 'Успешно',
+                                  description: 'Документ удален',
+                                });
+                                loadDocuments(companyId);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}
