@@ -1552,6 +1552,10 @@ export default function CRM() {
           companyId={companyId} 
           userId={userId}
           userName={userName}
+          onPlacementsChange={() => {
+            loadTemplatePlacements(companyId);
+            loadGeneratedDocuments(companyId);
+          }}
         />
       )}
     </div>

@@ -20,6 +20,7 @@ interface DocumentTemplatesDialogProps {
   companyId: string;
   userId: string;
   userName?: string;
+  onPlacementsChange?: () => void;
 }
 
 interface Template {
@@ -43,7 +44,7 @@ interface GeneratedDocument {
   created_at: string;
 }
 
-export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId, userName = "Сотрудник" }: DocumentTemplatesDialogProps) {
+export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId, userName = "Сотрудник", onPlacementsChange }: DocumentTemplatesDialogProps) {
   const { toast } = useToast();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [generatedDocs, setGeneratedDocs] = useState<GeneratedDocument[]>([]);
@@ -666,6 +667,7 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
           templateName={selectedTemplateForPlacement.name}
           companyId={companyId}
           userId={userId}
+          onPlacementsChange={onPlacementsChange}
         />
       )}
     </>
