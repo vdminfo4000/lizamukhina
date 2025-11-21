@@ -12,11 +12,18 @@ export const useDragScroll = () => {
 
     // Mouse events
     const handleMouseDown = (e: MouseEvent) => {
+      // Prevent drag on interactive elements
+      const target = e.target as HTMLElement;
+      if (target.closest('button, a, input, select, textarea')) {
+        return;
+      }
+      
       isDragging.current = true;
       startX.current = e.pageX - element.offsetLeft;
       scrollLeft.current = element.scrollLeft;
       element.style.cursor = 'grabbing';
       element.style.userSelect = 'none';
+      e.preventDefault();
     };
 
     const handleMouseLeave = () => {
