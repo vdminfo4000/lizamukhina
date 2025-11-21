@@ -121,7 +121,7 @@ export function TemplateButton({
         .from("generated-documents")
         .getPublicUrl(filePath);
 
-      // Save to database
+      // Save to generated_documents database
       const { error: dbError } = await supabase
         .from("generated_documents")
         .insert({
@@ -135,6 +135,25 @@ export function TemplateButton({
         });
 
       if (dbError) throw dbError;
+
+      // Also save a copy to crm_documents
+      const { error: crmDocError } = await supabase
+        .from("crm_documents")
+        .insert({
+          company_id: companyId,
+          file_name: fileName,
+          file_url: urlData.publicUrl,
+          file_size: blob.size,
+          file_type: blob.type,
+          uploaded_by: userId,
+          uploader_name: userName,
+          description: `Сгенерирован из шаблона: ${templateName}`,
+        });
+
+      if (crmDocError) {
+        console.error("Error saving to crm_documents:", crmDocError);
+        // Don't throw - main document was saved successfully
+      }
 
       toast({
         title: "Успешно",
