@@ -380,10 +380,32 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
 
   const handleDownloadDocument = async (doc: GeneratedDocument) => {
     try {
-      const response = await fetch(doc.file_url);
-      const blob = await response.blob();
-      saveAs(blob, doc.file_name);
+      // Загружаем файл напрямую из Supabase Storage, не используя публичный URL
+      let storagePath: string | null = null;
+
+      try {
+        const url = new URL(doc.file_url);
+        const afterBucket = url.pathname.split("/generated-documents/")[1];
+        storagePath = afterBucket || null;
+      } catch (e) {
+        console.error("Error parsing file URL for storage path:", e);
+      }
+
+      if (!storagePath) {
+        throw new Error("Некорректный путь к файлу в хранилище");
+      }
+
+      const { data, error } = await supabase.storage
+        .from("generated-documents")
+        .download(storagePath);
+
+      if (error || !data) {
+        throw error || new Error("Не удалось скачать файл из хранилища");
+      }
+
+      saveAs(data, doc.file_name);
     } catch (error) {
+      console.error("Error downloading document:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось скачать документ",
