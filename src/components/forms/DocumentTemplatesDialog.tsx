@@ -288,166 +288,72 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
         return acc;
       }, {} as Record<string, string>);
 
-      // Load and prepare the template with detailed error handling
+      // Load and prepare the template with tolerant handling of разорванных/дублированных тегов
       let doc: Docxtemplater | null = null;
       let templateErrorMessage = "";
 
-      const createDoc = (buffer: ArrayBuffer, tolerant: boolean) => {
+      const createDoc = (buffer: ArrayBuffer) => {
         const zip = new PizZip(buffer);
         return new Docxtemplater(zip, {
           paragraphLoop: true,
           linebreaks: true,
+          // Используем те же двойные фигурные скобки, что и в шаблоне: {{поле}}
+          delimiters: {
+            start: "{{",
+            end: "}}",
+          },
+          // Терпимо относимся к незакрытым/неоткрытым тегам, чтобы не падать на «битых» метках
+          syntax: {
+            allowUnopenedTag: true,
+            allowUnclosedTag: true,
+          },
           // Безопасная обработка отсутствующих значений
           nullGetter(part) {
             if (!part.module) {
-              return ""; // Заменяем пустые значения на пустую строку
+              return "";
             }
             if (part.module === "rawxml") {
-              return ""; // Для rawxml тоже возвращаем пустую строку
+              return "";
             }
             return "";
           },
-          ...(tolerant
-            ? {
-                // Более терпимая обработка разорванных/незакрытых тегов
-                syntax: {
-                  allowUnopenedTag: true,
-                  allowUnclosedTag: true,
-                },
-              }
-            : {}),
         });
       };
 
       try {
-
-        // Первая попытка: строгий режим
-        doc = createDoc(arrayBuffer, false);
-        try {
-          doc.render(cleanedData);
-        } catch (innerError: any) {
-          const errorId = innerError?.properties?.id as string | undefined;
-          const message = innerError?.message as string | undefined;
-          const isTagStructureError =
-            errorId === "unclosed_tag" ||
-            errorId === "duplicate_open_tag" ||
-            (message && message.toLowerCase().includes("duplicateopentag"));
-
-          if (!isTagStructureError) {
-            throw innerError;
-          }
-
-          // Вторая попытка: терпимый режим для проблемных/дублирующих тегов
-          console.warn(
-            "Retrying Docxtemplater render in tolerant mode due to tag structure error",
-            {
-              errorId,
-              message,
-            },
-          );
-          doc = createDoc(arrayBuffer, true);
-          doc.render(cleanedData);
-        }
+        doc = createDoc(arrayBuffer);
+        doc.render(cleanedData);
       } catch (renderError: any) {
         console.error("Docxtemplater template error:", renderError);
 
-        const escapeRegExp = (text: string) =>
-          text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-        const removeInvalidTagsFromTemplate = (buffer: ArrayBuffer, xtags: string[]) => {
-          try {
-            const zip = new PizZip(buffer);
-            const fileNames = Object.keys(zip.files).filter((name) => name.endsWith(".xml"));
-
-            fileNames.forEach((name) => {
-              const file = zip.files[name];
-              if (!file || file.dir) return;
-
-              let content = file.asText();
-              xtags.forEach((tag) => {
-                if (!tag) return;
-                const pattern = new RegExp(escapeRegExp(tag), "g");
-                content = content.replace(pattern, "");
-              });
-
-              zip.file(name, content);
-            });
-
-            return zip.generate({ type: "arraybuffer" });
-          } catch (e) {
-            console.error("Failed to auto-repair template XML", e);
-            return null;
-          }
-        };
-
         const templateErrorsRaw = renderError?.properties?.errors as any[] | undefined;
 
-        let detailedMessage = "";
-        let problemTags: string[] = [];
-
         if (templateErrorsRaw && templateErrorsRaw.length > 0) {
-          problemTags = templateErrorsRaw
-            .map((e) => {
-              const err = (e as any)?.properties ? e : (e as any)?.value;
-              const id = err?.properties?.id as string | undefined;
-              const xtag = err?.properties?.xtag as string | undefined;
-              if (id === "duplicate_open_tag" || id === "duplicate_close_tag") {
-                return xtag;
-              }
-              return undefined;
-            })
-            .filter((t): t is string => !!t);
-
           const messages = templateErrorsRaw
             .map((e) => {
               const err = (e as any)?.properties ? e : (e as any)?.value;
-              return (
-                err?.properties?.explanation ||
-                err?.properties?.message ||
-                err?.message
-              );
+              const xtag = err?.properties?.xtag as string | undefined;
+              const explanation = err?.properties?.explanation as string | undefined;
+              const message = err?.properties?.message as string | undefined;
+              const parts: string[] = [];
+              if (xtag) parts.push(String(xtag));
+              if (explanation || message) parts.push(String(explanation || message));
+              return parts.join(" — ");
             })
             .filter(Boolean)
             .join("\n");
 
-          detailedMessage = messages;
+          templateErrorMessage = messages;
         } else {
-          const contextTag = renderError?.properties?.context?.tag as string | undefined;
-          const explanation = renderError?.properties?.explanation as string | undefined;
-          const errorId = renderError?.properties?.id as string | undefined;
           const baseMessage = renderError?.message as string | undefined;
-
-          detailedMessage =
-            explanation ||
-            (contextTag
-              ? `Проблемный тег: ${contextTag}. Проверьте его написание и отсутствие скрытого форматирования.`
-              : "") ||
-            (errorId ? `Код ошибки: ${errorId}` : "") ||
+          templateErrorMessage =
             baseMessage ||
             "Не удалось обработать шаблон. Убедитесь, что все метки имеют формат {{ИМЯ_ПОЛЯ}} и не разбиты форматированием.";
         }
 
-        // Попытка автоисправления для дублирующихся/битых тегов
-        if (problemTags.length > 0) {
-          console.warn("Attempting auto-repair of template for tags", problemTags);
-          const repairedBuffer = removeInvalidTagsFromTemplate(arrayBuffer, problemTags);
-          if (repairedBuffer) {
-            try {
-              const repairedDoc = createDoc(repairedBuffer, true);
-              repairedDoc.render(cleanedData);
-              doc = repairedDoc;
-              console.info("Template auto-repair succeeded, continuing generation");
-              detailedMessage = "";
-            } catch (repairError) {
-              console.error("Auto-repair of template failed", repairError);
-            }
-          }
-        }
-
-        if (!doc) {
-          templateErrorMessage = detailedMessage;
-        }
+        doc = null;
       }
+
 
       if (!doc) {
         toast({
