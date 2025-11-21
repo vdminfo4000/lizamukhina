@@ -7,11 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Plus, Trash2, Download, Upload, Settings, Eye } from "lucide-react";
+import { FileText, Plus, Trash2, Download, Upload, Settings, Eye, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
+import { TemplatePlacementDialog } from "./TemplatePlacementDialog";
 
 interface DocumentTemplatesDialogProps {
   open: boolean;
@@ -53,6 +54,8 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const [placementDialogOpen, setPlacementDialogOpen] = useState(false);
+  const [selectedTemplateForPlacement, setSelectedTemplateForPlacement] = useState<Template | null>(null);
 
   useEffect(() => {
     if (open && companyId) {
@@ -525,13 +528,26 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
                             </Badge>
                           </CardDescription>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteTemplate(template.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedTemplateForPlacement(template);
+                              setPlacementDialogOpen(true);
+                            }}
+                          >
+                            <MapPin className="h-4 w-4 mr-1" />
+                            Место добавления
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -640,6 +656,18 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Placement Dialog */}
+      {selectedTemplateForPlacement && (
+        <TemplatePlacementDialog
+          open={placementDialogOpen}
+          onOpenChange={setPlacementDialogOpen}
+          templateId={selectedTemplateForPlacement.id}
+          templateName={selectedTemplateForPlacement.name}
+          companyId={companyId}
+          userId={userId}
+        />
+      )}
     </>
   );
 }
