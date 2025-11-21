@@ -360,9 +360,39 @@ export function DocumentTemplatesDialog({ open, onOpenChange, companyId, userId,
 
       if (dbError) throw dbError;
 
+      // Получаем все места размещения для этого шаблона
+      const { data: placements, error: placementsError } = await supabase
+        .from("template_placements")
+        .select("placement_type")
+        .eq("template_id", selectedTemplate.id)
+        .eq("company_id", companyId);
+
+      if (!placementsError && placements && placements.length > 0) {
+        // Для каждого места размещения создаем копию в crm_documents
+        const crmDocuments = placements.map(placement => ({
+          company_id: companyId,
+          file_name: `${selectedTemplate.name}.docx`,
+          file_url: urlData.publicUrl,
+          file_size: out.size,
+          file_type: out.type,
+          uploaded_by: userId,
+          uploader_name: userName,
+          description: `Сгенерирован из шаблона: ${selectedTemplate.name} (${placement.placement_type})`,
+          tags: [placement.placement_type],
+        }));
+
+        const { error: crmDocError } = await supabase
+          .from("crm_documents")
+          .insert(crmDocuments);
+
+        if (crmDocError) {
+          console.error("Error saving to crm_documents:", crmDocError);
+        }
+      }
+
       toast({
         title: "Документ сгенерирован",
-        description: "Файл успешно создан и сохранён в CRM",
+        description: "Файл успешно создан и сохранён во всех указанных местах",
       });
 
       setFillFormOpen(false);
