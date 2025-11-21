@@ -607,7 +607,10 @@ export default function CRM() {
                           userId={userId!}
                           userName={userName}
                           onGenerated={() => {
-                            if (companyId) loadGeneratedDocuments(companyId);
+                            if (companyId) {
+                              loadGeneratedDocuments(companyId);
+                              loadDocuments(companyId);
+                            }
                           }}
                         />
                       ))
@@ -710,7 +713,10 @@ export default function CRM() {
                               userId={userId!}
                               userName={userName}
                               onGenerated={() => {
-                                if (companyId) loadGeneratedDocuments(companyId);
+                                if (companyId) {
+                                  loadGeneratedDocuments(companyId);
+                                  loadDocuments(companyId);
+                                }
                               }}
                             />
                           ))
@@ -804,7 +810,10 @@ export default function CRM() {
                               userId={userId!}
                               userName={userName}
                               onGenerated={() => {
-                                if (companyId) loadGeneratedDocuments(companyId);
+                                if (companyId) {
+                                  loadGeneratedDocuments(companyId);
+                                  loadDocuments(companyId);
+                                }
                               }}
                             />
                           ))
@@ -898,7 +907,10 @@ export default function CRM() {
                               userId={userId!}
                               userName={userName}
                               onGenerated={() => {
-                                if (companyId) loadGeneratedDocuments(companyId);
+                                if (companyId) {
+                                  loadGeneratedDocuments(companyId);
+                                  loadDocuments(companyId);
+                                }
                               }}
                             />
                           ))
@@ -1251,7 +1263,10 @@ export default function CRM() {
                           userId={userId!}
                           userName={userName}
                           onGenerated={() => {
-                            if (companyId) loadGeneratedDocuments(companyId);
+                            if (companyId) {
+                              loadGeneratedDocuments(companyId);
+                              loadDocuments(companyId);
+                            }
                           }}
                         />
                       ))
