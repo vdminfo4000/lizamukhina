@@ -138,14 +138,16 @@ export function TemplateButton({
 
       if (dbError) throw dbError;
 
-      // Save a copy to crm_documents with placement_type in description
-      const description = placementType 
-        ? `Сгенерирован из шаблона: ${templateName} (${placementType})`
-        : `Сгенерирован из шаблона: ${templateName}`;
-        
-      const { error: crmDocError } = await supabase
-        .from("crm_documents")
-        .insert({
+      // Получаем все места размещения для этого шаблона
+      const { data: placements, error: placementsError } = await supabase
+        .from("template_placements")
+        .select("placement_type")
+        .eq("template_id", templateId)
+        .eq("company_id", companyId);
+
+      if (!placementsError && placements && placements.length > 0) {
+        // Для каждого места размещения создаем копию в crm_documents
+        const crmDocuments = placements.map(placement => ({
           company_id: companyId,
           file_name: fileName,
           file_url: urlData.publicUrl,
@@ -153,12 +155,17 @@ export function TemplateButton({
           file_type: blob.type,
           uploaded_by: userId,
           uploader_name: userName,
-          description: description,
-          tags: placementType ? [placementType] : [],
-        });
+          description: `Сгенерирован из шаблона: ${templateName} (${placement.placement_type})`,
+          tags: [placement.placement_type],
+        }));
 
-      if (crmDocError) {
-        console.error("Error saving to crm_documents:", crmDocError);
+        const { error: crmDocError } = await supabase
+          .from("crm_documents")
+          .insert(crmDocuments);
+
+        if (crmDocError) {
+          console.error("Error saving to crm_documents:", crmDocError);
+        }
       }
 
       toast({
