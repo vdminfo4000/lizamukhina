@@ -124,8 +124,9 @@ export function TemplateButton({
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
 
-      // Upload generated document
-      const fileName = `${Date.now()}_${templateName.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_")}.docx`;
+      // Upload generated document - use ASCII-only filename for storage
+      const safeTemplateName = templateName.replace(/[^a-zA-Z0-9]/g, "_");
+      const fileName = `${Date.now()}_${safeTemplateName || "document"}.docx`;
       const filePath = `${companyId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
