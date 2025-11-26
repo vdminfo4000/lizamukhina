@@ -442,13 +442,14 @@ export default function Monitoring() {
             >
               {plots.map((plot) => (
                 plot.location_lat && plot.location_lng && (
-                  <PlotWeatherWidget
-                    key={plot.id}
-                    plotName={plot.name}
-                    cadastralNumber={plot.cadastral_number}
-                    latitude={plot.location_lat}
-                    longitude={plot.location_lng}
-                  />
+                  <div key={plot.id} className="flex-shrink-0 min-w-[280px]">
+                    <PlotWeatherWidget
+                      plotName={plot.name}
+                      cadastralNumber={plot.cadastral_number}
+                      latitude={plot.location_lat}
+                      longitude={plot.location_lng}
+                    />
+                  </div>
                 )
               ))}
             </div>
