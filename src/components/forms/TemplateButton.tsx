@@ -77,31 +77,46 @@ export function TemplateButton({
 
       const arrayBuffer = await fileData.arrayBuffer();
 
+      // Подготовка данных: заменяем null/undefined на пустые строки
+      const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
+        acc[key] = value == null ? "" : String(value);
+        return acc;
+      }, {} as Record<string, string>);
+
       // Generate document using Docxtemplater
-      const zip = new PizZip(arrayBuffer);
-      
-      // Fix broken tags in XML (Word splits tags across multiple XML elements)
-      const fixBrokenTags = (text: string) => {
-        // Remove XML tags between {{ and }}
-        return text.replace(/\{\{([^}]*?)<[^>]+>([^}]*?)\}\}/g, (match, before, after) => {
-          const cleaned = match.replace(/<[^>]+>/g, '');
-          return cleaned;
+      const zip = new PizZip(arrayBuffer as any);
+      let doc: Docxtemplater;
+
+      try {
+        doc = new Docxtemplater(zip, {
+          delimiters: { start: "{{", end: "}}" },
+          paragraphLoop: true,
+          linebreaks: true,
         });
-      };
+      } catch (error: any) {
+        console.error("Error initializing Docxtemplater:", error);
+        throw new Error(
+          error?.message ||
+            "Не удалось инициализировать шаблон. Проверьте, что файл является корректным .docx-документом."
+        );
+      }
 
-      // Apply fix to all XML files in the document
-      zip.file(/\.xml$/).forEach((file: any) => {
-        const content = zip.file(file.name).asText();
-        const fixed = fixBrokenTags(content);
-        zip.file(file.name, fixed);
-      });
+      try {
+        doc.render(cleanedData);
+      } catch (error: any) {
+        console.error("Error rendering document:", error);
 
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-      });
+        const detailedMessage =
+          error?.properties?.errors
+            ?.map((e: any) => e.properties?.explanation)
+            .filter(Boolean)
+            .join("\n") || error?.message;
 
-      doc.render(formData);
+        throw new Error(
+          detailedMessage ||
+            "Ошибка в шаблоне документа. Проверьте корректность меток {{...}} и отсутствие разорванных тегов."
+        );
+      }
 
       const blob = doc.getZip().generate({
         type: "blob",
